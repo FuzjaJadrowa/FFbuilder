@@ -16,6 +16,12 @@ jobs:
         run: ./bootstrap-linux.sh
       - name: Build
         run: ./build.sh linux
+      - name: Upload config.log (on failure)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: config-log-linux
+          path: ffbuild/build/ffmpeg/config.log
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -33,6 +39,12 @@ jobs:
         run: ./bootstrap-macos.sh
       - name: Build
         run: ./build.sh macos
+      - name: Upload config.log (on failure)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: config-log-macos
+          path: ffbuild/build/ffmpeg/config.log
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -61,6 +73,12 @@ jobs:
       - name: Build
         shell: msys2 {0}
         run: ./build.sh windows
+      - name: Upload config.log (on failure)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: config-log-windows
+          path: ffbuild/build/ffmpeg/config.log
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

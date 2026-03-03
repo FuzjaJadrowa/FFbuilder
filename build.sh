@@ -14,7 +14,11 @@ if [[ -z "$TARGET_INPUT" ]]; then
     esac
 fi
 
-TARGET_INPUT="${TARGET_INPUT,,}"
+lower() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+TARGET_INPUT="$(lower "$TARGET_INPUT")"
 case "$TARGET_INPUT" in
     linux|macos|windows) ;;
     *) echo "Usage: $0 <linux|macos|windows>" >&2; exit 1 ;;
@@ -78,8 +82,30 @@ set_toolchain() {
         windows)
             export CC="${CC:-x86_64-w64-mingw32-gcc}"
             export CXX="${CXX:-x86_64-w64-mingw32-g++}"
-            export AR="${AR:-x86_64-w64-mingw32-ar}"
-            export RANLIB="${RANLIB:-x86_64-w64-mingw32-ranlib}"
+            if [[ -z "${AR:-}" ]]; then
+                if command -v x86_64-w64-mingw32-ar >/dev/null 2>&1; then
+                    export AR="x86_64-w64-mingw32-ar"
+                elif command -v x86_64-w64-mingw32-gcc-ar >/dev/null 2>&1; then
+                    export AR="x86_64-w64-mingw32-gcc-ar"
+                elif command -v gcc-ar >/dev/null 2>&1; then
+                    export AR="gcc-ar"
+                else
+                    echo "Missing MinGW ar (x86_64-w64-mingw32-ar). Install mingw-w64 binutils or set AR." >&2
+                    exit 1
+                fi
+            fi
+            if [[ -z "${RANLIB:-}" ]]; then
+                if command -v x86_64-w64-mingw32-ranlib >/dev/null 2>&1; then
+                    export RANLIB="x86_64-w64-mingw32-ranlib"
+                elif command -v x86_64-w64-mingw32-gcc-ranlib >/dev/null 2>&1; then
+                    export RANLIB="x86_64-w64-mingw32-gcc-ranlib"
+                elif command -v gcc-ranlib >/dev/null 2>&1; then
+                    export RANLIB="gcc-ranlib"
+                else
+                    echo "Missing MinGW ranlib (x86_64-w64-mingw32-ranlib). Install mingw-w64 binutils or set RANLIB." >&2
+                    exit 1
+                fi
+            fi
             export NM="${NM:-x86_64-w64-mingw32-nm}"
             export STRIP="${STRIP:-x86_64-w64-mingw32-strip}"
             CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
