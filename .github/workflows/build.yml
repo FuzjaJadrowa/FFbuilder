@@ -1,0 +1,68 @@
+name: Build FFmpeg (native)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Ensure scripts executable
+        run: chmod +x build.sh bootstrap-linux.sh bootstrap-macos.sh bootstrap-windows.sh
+      - name: Bootstrap
+        run: ./bootstrap-linux.sh
+      - name: Build
+        run: ./build.sh linux
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-linux
+          path: artifacts/ffmpeg-linux.tar.xz
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Ensure scripts executable
+        run: chmod +x build.sh bootstrap-linux.sh bootstrap-macos.sh bootstrap-windows.sh
+      - name: Bootstrap
+        run: ./bootstrap-macos.sh
+      - name: Build
+        run: ./build.sh macos
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-macos
+          path: artifacts/ffmpeg-macos.tar.xz
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel
+            git
+      - name: Ensure scripts executable
+        shell: msys2 {0}
+        run: chmod +x build.sh bootstrap-linux.sh bootstrap-macos.sh bootstrap-windows.sh
+      - name: Bootstrap
+        shell: msys2 {0}
+        run: ./bootstrap-windows.sh
+      - name: Build
+        shell: msys2 {0}
+        run: ./build.sh windows
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-windows
+          path: artifacts/ffmpeg-windows.zip
