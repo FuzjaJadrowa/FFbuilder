@@ -35,6 +35,27 @@ ARTIFACTS="${ARTIFACTS:-$ROOT/artifacts}"
 
 mkdir -p "$SRC" "$BUILD" "$PREFIX" "$ARTIFACTS"
 
+DEPS_SRC="$SRC/deps"
+DEPS_BUILD="$BUILD/deps"
+mkdir -p "$DEPS_SRC" "$DEPS_BUILD"
+
+append_flag() {
+    local var="$1"
+    local val="$2"
+    local cur
+    cur="$(eval "printf '%s' \"\${$var:-}\"")"
+    if [[ -n "$cur" ]]; then
+        eval "export $var=\"${cur} ${val}\""
+    else
+        eval "export $var=\"${val}\""
+    fi
+}
+
+append_flag CFLAGS "-I$PREFIX/include"
+append_flag CPPFLAGS "-I$PREFIX/include"
+append_flag LDFLAGS "-L$PREFIX/lib"
+export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/lib64/pkgconfig:${PKG_CONFIG_PATH:-}"
+
 detect_nproc() {
     if command -v nproc >/dev/null 2>&1; then
         nproc
@@ -121,12 +142,24 @@ FFMPEG_FLAGS=(
     --pkg-config-flags=--static
     --disable-shared
     --enable-static
+    --enable-gpl
+    --enable-nonfree
     --disable-debug
     --disable-doc
     --disable-programs
     --enable-ffmpeg
     --enable-ffprobe
     --disable-autodetect
+    --enable-libx264
+    --enable-libx265
+    --enable-libvpx
+    --enable-libsvtav1
+    --enable-libdav1d
+    --enable-libmp3lame
+    --enable-libfdk-aac
+    --enable-libopus
+    --enable-libvorbis
+    --enable-libwebp
 )
 
 if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
@@ -139,12 +172,207 @@ if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
     FFMPEG_FLAGS=("${tmp_flags[@]}")
 fi
 
+FFMPEG_EXTRA_CFLAGS="-I$PREFIX/include"
+FFMPEG_EXTRA_LDFLAGS="-L$PREFIX/lib"
+
+clone_repo() {
+    local url="$1"
+    local dir="$2"
+    if [[ ! -d "$dir/.git" ]]; then
+        git clone --depth 1 "$url" "$dir"
+    fi
+}
+
+ensure_configure() {
+    local dir="$1"
+    if [[ ! -x "$dir/configure" ]]; then
+        if [[ -x "$dir/autogen.sh" ]]; then
+            (cd "$dir" && ./autogen.sh)
+        elif [[ -x "$dir/bootstrap" ]]; then
+            (cd "$dir" && ./bootstrap)
+        elif [[ -x "$dir/bootstrap.sh" ]]; then
+            (cd "$dir" && ./bootstrap.sh)
+        else
+            echo "Missing configure/autogen script in $dir" >&2
+            exit 1
+        fi
+    fi
+}
+
+build_x264() {
+    local src="$DEPS_SRC/x264"
+    clone_repo "https://code.videolan.org/videolan/x264.git" "$src"
+    (cd "$src" && make distclean >/dev/null 2>&1 || true)
+    local args=(--prefix="$PREFIX" --enable-static --disable-opencl --disable-cli --enable-pic)
+    if [[ "$TARGET_INPUT" == "windows" ]]; then
+        args+=(--host=x86_64-w64-mingw32 --cross-prefix="$CROSS_PREFIX")
+    fi
+    (cd "$src" && ./configure "${args[@]}")
+    (cd "$src" && make -j"$NPROC")
+    (cd "$src" && make install)
+}
+
+build_x265() {
+    local src="$DEPS_SRC/x265"
+    clone_repo "https://bitbucket.org/multicoreware/x265_git.git" "$src"
+    local b="$DEPS_BUILD/x265"
+    rm -rf "$b"
+    mkdir -p "$b"
+    local gen=()
+    if command -v ninja >/dev/null 2>&1; then
+        gen=(-G Ninja)
+    fi
+    cmake -S "$src/source" -B "$b" "${gen[@]}" \
+        -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_SHARED=OFF \
+        -DENABLE_PIC=ON \
+        -DENABLE_CLI=OFF \
+        -DCMAKE_C_COMPILER="$CC" \
+        -DCMAKE_CXX_COMPILER="$CXX" \
+        -DCMAKE_AR="$AR" \
+        -DCMAKE_RANLIB="$RANLIB"
+    cmake --build "$b" -j"$NPROC"
+    cmake --install "$b"
+}
+
+build_libvpx() {
+    local src="$DEPS_SRC/libvpx"
+    clone_repo "https://chromium.googlesource.com/webm/libvpx" "$src"
+    (cd "$src" && make distclean >/dev/null 2>&1 || true)
+    local args=(--prefix="$PREFIX" --disable-shared --enable-static --disable-examples --disable-tools --disable-docs --disable-unit-tests --enable-pic)
+    if [[ "$TARGET_INPUT" == "windows" ]]; then
+        args+=(--target=x86_64-win64-gcc)
+    fi
+    (cd "$src" && ./configure "${args[@]}")
+    (cd "$src" && make -j"$NPROC")
+    (cd "$src" && make install)
+}
+
+build_svtav1() {
+    local src="$DEPS_SRC/SVT-AV1"
+    clone_repo "https://github.com/AOMediaCodec/SVT-AV1.git" "$src"
+    local b="$DEPS_BUILD/svt-av1"
+    rm -rf "$b"
+    mkdir -p "$b"
+    local gen=()
+    if command -v ninja >/dev/null 2>&1; then
+        gen=(-G Ninja)
+    fi
+    cmake -S "$src" -B "$b" "${gen[@]}" \
+        -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DSVT_AV1_BUILD_APPS=OFF \
+        -DSVT_AV1_BUILD_TESTS=OFF \
+        -DCMAKE_C_COMPILER="$CC" \
+        -DCMAKE_CXX_COMPILER="$CXX"
+    cmake --build "$b" -j"$NPROC"
+    cmake --install "$b"
+}
+
+build_dav1d() {
+    local src="$DEPS_SRC/dav1d"
+    clone_repo "https://code.videolan.org/videolan/dav1d.git" "$src"
+    local b="$DEPS_BUILD/dav1d"
+    rm -rf "$b"
+    mkdir -p "$b"
+    meson setup "$b" "$src" \
+        --prefix="$PREFIX" \
+        --buildtype=release \
+        -Ddefault_library=static \
+        -Denable_tools=false \
+        -Denable_tests=false
+    meson compile -C "$b" -j"$NPROC"
+    meson install -C "$b"
+}
+
+build_lame() {
+    local src="$DEPS_SRC/lame"
+    clone_repo "https://github.com/rbrito/lame.git" "$src"
+    ensure_configure "$src"
+    (cd "$src" && make distclean >/dev/null 2>&1 || true)
+    (cd "$src" && ./configure --prefix="$PREFIX" --disable-shared --enable-static --disable-frontend --with-pic)
+    (cd "$src" && make -j"$NPROC")
+    (cd "$src" && make install)
+}
+
+build_fdk_aac() {
+    local src="$DEPS_SRC/fdk-aac"
+    clone_repo "https://github.com/mstorsjo/fdk-aac.git" "$src"
+    ensure_configure "$src"
+    (cd "$src" && make distclean >/dev/null 2>&1 || true)
+    (cd "$src" && ./configure --prefix="$PREFIX" --disable-shared --enable-static --with-pic)
+    (cd "$src" && make -j"$NPROC")
+    (cd "$src" && make install)
+}
+
+build_ogg() {
+    local src="$DEPS_SRC/ogg"
+    clone_repo "https://github.com/xiph/ogg.git" "$src"
+    ensure_configure "$src"
+    (cd "$src" && make distclean >/dev/null 2>&1 || true)
+    (cd "$src" && ./configure --prefix="$PREFIX" --disable-shared --enable-static --with-pic)
+    (cd "$src" && make -j"$NPROC")
+    (cd "$src" && make install)
+}
+
+build_vorbis() {
+    local src="$DEPS_SRC/vorbis"
+    clone_repo "https://github.com/xiph/vorbis.git" "$src"
+    ensure_configure "$src"
+    (cd "$src" && make distclean >/dev/null 2>&1 || true)
+    (cd "$src" && ./configure --prefix="$PREFIX" --disable-shared --enable-static --with-pic)
+    (cd "$src" && make -j"$NPROC")
+    (cd "$src" && make install)
+}
+
+build_opus() {
+    local src="$DEPS_SRC/opus"
+    clone_repo "https://github.com/xiph/opus.git" "$src"
+    ensure_configure "$src"
+    (cd "$src" && make distclean >/dev/null 2>&1 || true)
+    (cd "$src" && ./configure --prefix="$PREFIX" --disable-shared --enable-static --with-pic)
+    (cd "$src" && make -j"$NPROC")
+    (cd "$src" && make install)
+}
+
+build_webp() {
+    local src="$DEPS_SRC/libwebp"
+    clone_repo "https://chromium.googlesource.com/webm/libwebp" "$src"
+    ensure_configure "$src"
+    (cd "$src" && make distclean >/dev/null 2>&1 || true)
+    (cd "$src" && ./configure --prefix="$PREFIX" --disable-shared --enable-static --with-pic)
+    (cd "$src" && make -j"$NPROC")
+    (cd "$src" && make install)
+}
+
+build_deps() {
+    build_x264
+    build_x265
+    build_libvpx
+    build_svtav1
+    build_dav1d
+    build_lame
+    build_fdk_aac
+    build_opus
+    build_ogg
+    build_vorbis
+    build_webp
+}
+
 ffdir="$SRC/ffmpeg"
 if [[ ! -d "$ffdir/.git" ]]; then
     git clone --filter=blob:none "$FFMPEG_REPO" "$ffdir"
 fi
 git -C "$ffdir" fetch --depth 1 origin "$FFMPEG_BRANCH" || true
 git -C "$ffdir" checkout "$FFMPEG_BRANCH"
+
+if "$ffdir/configure" --help 2>/dev/null | grep -q -- "--enable-libogg"; then
+    FFMPEG_FLAGS+=(--enable-libogg)
+fi
+
+build_deps
 
 builddir="$BUILD/ffmpeg"
 rm -rf "$builddir"
@@ -154,6 +382,8 @@ cd "$builddir"
 "$ffdir/configure" \
     "${FFMPEG_FLAGS[@]}" \
     $FFMPEG_TARGET_FLAGS \
+    --extra-cflags="$FFMPEG_EXTRA_CFLAGS" \
+    --extra-ldflags="$FFMPEG_EXTRA_LDFLAGS" \
     --cc="$CC" --cxx="$CXX" --ar="$AR" --ranlib="$RANLIB" --nm="$NM"
 
 make -j"$NPROC" V=1
