@@ -7,6 +7,7 @@ pacman -S --needed --noconfirm \
     base-devel \
     git \
     libtool \
+    mingw-w64-x86_64-binutils \
     mingw-w64-x86_64-cmake \
     mingw-w64-x86_64-meson \
     mingw-w64-x86_64-ninja \

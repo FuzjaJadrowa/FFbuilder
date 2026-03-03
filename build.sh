@@ -56,6 +56,18 @@ append_flag CPPFLAGS "-I$PREFIX/include"
 append_flag LDFLAGS "-L$PREFIX/lib"
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/lib64/pkgconfig:${PKG_CONFIG_PATH:-}"
 
+resolve_tool() {
+    local t="$1"
+    if [[ -z "$t" ]]; then
+        return 1
+    fi
+    if command -v "$t" >/dev/null 2>&1; then
+        command -v "$t"
+        return 0
+    fi
+    return 1
+}
+
 detect_nproc() {
     if command -v nproc >/dev/null 2>&1; then
         nproc
@@ -127,8 +139,41 @@ set_toolchain() {
                     exit 1
                 fi
             fi
-            export NM="${NM:-x86_64-w64-mingw32-nm}"
-            export STRIP="${STRIP:-x86_64-w64-mingw32-strip}"
+            if [[ -z "${NM:-}" ]]; then
+                if command -v x86_64-w64-mingw32-nm >/dev/null 2>&1; then
+                    export NM="x86_64-w64-mingw32-nm"
+                elif command -v x86_64-w64-mingw32-gcc-nm >/dev/null 2>&1; then
+                    export NM="x86_64-w64-mingw32-gcc-nm"
+                elif command -v gcc-nm >/dev/null 2>&1; then
+                    export NM="gcc-nm"
+                elif command -v nm >/dev/null 2>&1; then
+                    export NM="nm"
+                else
+                    echo "Missing nm. Install mingw-w64 binutils or set NM." >&2
+                    exit 1
+                fi
+            fi
+            if [[ -z "${STRIP:-}" ]]; then
+                if command -v x86_64-w64-mingw32-strip >/dev/null 2>&1; then
+                    export STRIP="x86_64-w64-mingw32-strip"
+                elif command -v x86_64-w64-mingw32-gcc-strip >/dev/null 2>&1; then
+                    export STRIP="x86_64-w64-mingw32-gcc-strip"
+                elif command -v gcc-strip >/dev/null 2>&1; then
+                    export STRIP="gcc-strip"
+                elif command -v strip >/dev/null 2>&1; then
+                    export STRIP="strip"
+                else
+                    export STRIP=":"
+                    FFMPEG_DISABLE_STRIPPING=1
+                fi
+            fi
+            if [[ -z "${STRINGS:-}" ]]; then
+                if command -v x86_64-w64-mingw32-strings >/dev/null 2>&1; then
+                    export STRINGS="x86_64-w64-mingw32-strings"
+                elif command -v strings >/dev/null 2>&1; then
+                    export STRINGS="strings"
+                fi
+            fi
             CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
             FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
             ;;
@@ -172,6 +217,10 @@ if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
     FFMPEG_FLAGS=("${tmp_flags[@]}")
 fi
 
+if [[ "${FFMPEG_DISABLE_STRIPPING:-0}" == "1" ]]; then
+    FFMPEG_FLAGS+=(--disable-stripping)
+fi
+
 FFMPEG_EXTRA_CFLAGS="-I$PREFIX/include"
 FFMPEG_EXTRA_LDFLAGS="-L$PREFIX/lib"
 
@@ -207,7 +256,7 @@ build_x264() {
     if [[ "$TARGET_INPUT" == "windows" ]]; then
         args+=(--host=x86_64-w64-mingw32 --cross-prefix="$CROSS_PREFIX")
     fi
-    (cd "$src" && ./configure "${args[@]}")
+    (cd "$src" && STRINGS="${STRINGS:-}" ./configure "${args[@]}")
     (cd "$src" && make -j"$NPROC")
     (cd "$src" && make install)
 }
@@ -222,6 +271,10 @@ build_x265() {
     if command -v ninja >/dev/null 2>&1; then
         gen=(-G Ninja)
     fi
+    local ar_path=""
+    local ranlib_path=""
+    ar_path="$(resolve_tool "$AR" || true)"
+    ranlib_path="$(resolve_tool "$RANLIB" || true)"
     cmake -S "$src/source" -B "$b" "${gen[@]}" \
         -DCMAKE_INSTALL_PREFIX="$PREFIX" \
         -DCMAKE_BUILD_TYPE=Release \
@@ -230,8 +283,8 @@ build_x265() {
         -DENABLE_CLI=OFF \
         -DCMAKE_C_COMPILER="$CC" \
         -DCMAKE_CXX_COMPILER="$CXX" \
-        -DCMAKE_AR="$AR" \
-        -DCMAKE_RANLIB="$RANLIB"
+        -DCMAKE_AR="${ar_path:-$AR}" \
+        -DCMAKE_RANLIB="${ranlib_path:-$RANLIB}"
     cmake --build "$b" -j"$NPROC"
     cmake --install "$b"
 }
@@ -384,7 +437,7 @@ cd "$builddir"
     $FFMPEG_TARGET_FLAGS \
     --extra-cflags="$FFMPEG_EXTRA_CFLAGS" \
     --extra-ldflags="$FFMPEG_EXTRA_LDFLAGS" \
-    --cc="$CC" --cxx="$CXX" --ar="$AR" --ranlib="$RANLIB" --nm="$NM"
+    --cc="$CC" --cxx="$CXX" --ar="$AR" --ranlib="$RANLIB" --nm="$NM" --strip="$STRIP"
 
 make -j"$NPROC" V=1
 make install
