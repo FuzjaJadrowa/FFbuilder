@@ -52,6 +52,13 @@ detect_nproc() {
 }
 
 NPROC="$(detect_nproc)"
+HOST_UNAME="$(uname -s)"
+HOST_IS_WINDOWS=0
+case "$HOST_UNAME" in
+    MINGW*|MSYS*|CYGWIN*) HOST_IS_WINDOWS=1 ;;
+esac
+HOST_TRIPLET=""
+CROSS_PREFIX=""
 
 set_toolchain() {
     local arch
@@ -141,6 +148,7 @@ set_toolchain() {
                     exit 1
                 fi
             fi
+            HOST_TRIPLET="${HOST_TRIPLET:-x86_64-w64-mingw32}"
             CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
             FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
             ;;
@@ -149,9 +157,46 @@ set_toolchain() {
 
 set_toolchain
 
+IS_CROSS_WINDOWS=0
+if [[ "$TARGET_INPUT" == "windows" && "$HOST_IS_WINDOWS" == "0" ]]; then
+    IS_CROSS_WINDOWS=1
+fi
+
+COMMON_CFLAGS=""
+if [[ "$TARGET_INPUT" != "windows" ]]; then
+    COMMON_CFLAGS="-fPIC"
+fi
+
+export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/lib64/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+CMAKE_GENERATOR="${CMAKE_GENERATOR:-Unix Makefiles}"
+
+export ROOT WORK SRC BUILD PREFIX NPROC TARGET_INPUT
+export CC CXX AR RANLIB NM STRIP CROSS_PREFIX HOST_TRIPLET
+export IS_CROSS_WINDOWS COMMON_CFLAGS CMAKE_GENERATOR
+
+run_lib_script() {
+    local script="$1"
+    local path="$ROOT/libs/$script"
+    if [[ ! -f "$path" ]]; then
+        echo "Missing library script: $path" >&2
+        exit 1
+    fi
+    bash "$path"
+}
+
+build_deps() {
+    run_lib_script "x264.sh"
+    run_lib_script "x265.sh"
+    run_lib_script "vpx.sh"
+    run_lib_script "svtav1.sh"
+    run_lib_script "dav1d.sh"
+}
+
 FFMPEG_FLAGS=(
     --prefix="$PREFIX"
     --pkg-config-flags=--static
+    --extra-cflags="-I$PREFIX/include"
+    --extra-ldflags="-L$PREFIX/lib"
     --disable-shared
     --enable-static
     --disable-debug
@@ -160,6 +205,12 @@ FFMPEG_FLAGS=(
     --enable-ffmpeg
     --enable-ffprobe
     --disable-autodetect
+    --enable-gpl
+    --enable-libx264
+    --enable-libx265
+    --enable-libvpx
+    --enable-libsvtav1
+    --enable-libdav1d
 )
 
 if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
@@ -171,6 +222,8 @@ if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
     done
     FFMPEG_FLAGS=("${tmp_flags[@]}")
 fi
+
+build_deps
 
 ffdir="$SRC/ffmpeg"
 if [[ ! -d "$ffdir/.git" ]]; then
