@@ -8,10 +8,19 @@ require_env SRC BUILD PREFIX NPROC TARGET_INPUT
 
 SVTAV1_REPO="${SVTAV1_REPO:-https://github.com/AOMediaCodec/SVT-AV1.git}"
 
-fetch_repo "svt-av1" "$SVTAV1_REPO"
+fetch_repo "svt-av1" "$SVTAV1_REPO" 1
 src="$SRC/svt-av1"
 builddir="$BUILD/svt-av1"
 rm -rf "$builddir"
+
+if [[ ! -f "$src/CMakeLists.txt" ]]; then
+    git -C "$src" checkout -f || true
+fi
+if [[ ! -f "$src/CMakeLists.txt" ]]; then
+    echo "SVT-AV1 checkout missing CMakeLists.txt in $src" >&2
+    ls -la "$src" >&2
+    exit 1
+fi
 
 cmake_args=(
     -G "${CMAKE_GENERATOR:-Unix Makefiles}"

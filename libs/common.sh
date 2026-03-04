@@ -15,9 +15,14 @@ require_env() {
 fetch_repo() {
     local name="$1"
     local url="$2"
+    local no_filter="${3:-0}"
     local dir="$SRC/$name"
     if [[ ! -d "$dir/.git" ]]; then
-        git clone --filter=blob:none --depth 1 "$url" "$dir"
+        if [[ "$no_filter" == "1" ]]; then
+            git clone --depth 1 "$url" "$dir"
+        else
+            git clone --filter=blob:none --depth 1 "$url" "$dir"
+        fi
     else
         git -C "$dir" fetch --depth 1 origin || true
     fi

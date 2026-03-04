@@ -26,7 +26,10 @@ cfg=(
 )
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
-    cfg+=(--target=x86_64-win64-gcc --cross-prefix="$CROSS_PREFIX")
+    cfg+=(--target=x86_64-win64-gcc)
+    if [[ "${IS_CROSS_WINDOWS:-0}" == "1" ]]; then
+        cfg+=(--cross-prefix="$CROSS_PREFIX")
+    fi
 fi
 
 (cd "$builddir" && CFLAGS="${COMMON_CFLAGS:-}" "${cfg[@]}")

@@ -25,7 +25,7 @@ cfg=(
     --enable-pic
 )
 
-if [[ "$TARGET_INPUT" == "windows" ]]; then
+if [[ "${IS_CROSS_WINDOWS:-0}" == "1" ]]; then
     cfg+=(--host="$HOST_TRIPLET" --cross-prefix="$CROSS_PREFIX")
 fi
 
