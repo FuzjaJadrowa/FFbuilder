@@ -14,7 +14,8 @@ builddir="$BUILD/svt-av1"
 rm -rf "$builddir"
 
 if [[ ! -f "$src/CMakeLists.txt" ]]; then
-    git -C "$src" checkout -f || true
+    rm -rf "$src"
+    fetch_repo "svt-av1" "$SVTAV1_REPO" 1
 fi
 if [[ ! -f "$src/CMakeLists.txt" ]]; then
     echo "SVT-AV1 checkout missing CMakeLists.txt in $src" >&2

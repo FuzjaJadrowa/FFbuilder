@@ -8,8 +8,17 @@ require_env SRC BUILD PREFIX NPROC TARGET_INPUT
 
 X265_REPO="${X265_REPO:-https://bitbucket.org/multicoreware/x265_git.git}"
 
-fetch_repo "x265" "$X265_REPO"
+fetch_repo "x265" "$X265_REPO" 1
 src="$SRC/x265"
+if [[ ! -f "$src/source/CMakeLists.txt" || ! -f "$src/source/x265Version.txt" ]]; then
+    rm -rf "$src"
+    fetch_repo "x265" "$X265_REPO" 1
+fi
+if [[ ! -f "$src/source/CMakeLists.txt" || ! -f "$src/source/x265Version.txt" ]]; then
+    echo "x265 checkout missing required files in $src/source" >&2
+    ls -la "$src/source" >&2 || true
+    exit 1
+fi
 builddir="$BUILD/x265"
 rm -rf "$builddir"
 
