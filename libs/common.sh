@@ -1,50 +1,43 @@
 #!/usr/bin/env bash
 set -euo pipefail
-shopt -s nullglob
 
-require_env() {
-    local var
-    for var in "$@"; do
-        if [[ -z "${!var:-}" ]]; then
-            echo "Missing required env var: $var" >&2
-            exit 1
-        fi
-    done
-}
-
-fetch_repo() {
+require_var() {
     local name="$1"
-    local url="$2"
-    local no_filter="${3:-0}"
-    local dir="$SRC/$name"
-    if [[ ! -d "$dir/.git" ]]; then
-        if [[ "$no_filter" == "1" ]]; then
-            git clone --depth 1 "$url" "$dir"
-        else
-            git clone --filter=blob:none --depth 1 "$url" "$dir"
-        fi
-    else
-        git -C "$dir" fetch --depth 1 origin || true
+    if [[ -z "${!name:-}" ]]; then
+        echo "Missing env $name. Run via build.sh or export it." >&2
+        exit 1
     fi
 }
 
-ensure_configure() {
+for var in ROOT TARGET_INPUT WORK SRC BUILD PREFIX NPROC CC CXX AR RANLIB NM STRIP; do
+    require_var "$var"
+done
+
+export PKG_CONFIG_PATH="${PKG_CONFIG_PATH:-$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig}"
+export PATH="$PREFIX/bin:$PATH"
+
+ensure_clone() {
     local dir="$1"
-    if [[ -f "$dir/configure" ]]; then
-        return
+    local repo="$2"
+    if [[ ! -d "$dir/.git" ]]; then
+        git clone --filter=blob:none "$repo" "$dir"
     fi
-    if [[ -x "$dir/autogen.sh" ]]; then
-        (cd "$dir" && ./autogen.sh)
-        return
-    fi
-    if [[ -x "$dir/bootstrap" ]]; then
-        (cd "$dir" && ./bootstrap)
-        return
-    fi
-    if [[ -x "$dir/bootstrap.sh" ]]; then
-        (cd "$dir" && ./bootstrap.sh)
-        return
-    fi
-    echo "Missing configure script in $dir (no autogen/bootstrap found)." >&2
-    exit 1
+}
+
+git_checkout() {
+    local dir="$1"
+    local ref="$2"
+    git -C "$dir" fetch --depth 1 origin "$ref" || true
+    git -C "$dir" checkout "$ref"
+}
+
+is_windows_host() {
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+is_cross_windows() {
+    [[ "$TARGET_INPUT" == "windows" ]] && ! is_windows_host
 }

@@ -149,18 +149,62 @@ set_toolchain() {
 
 set_toolchain
 
+export ROOT TARGET_INPUT WORK SRC BUILD PREFIX ARTIFACTS NPROC CC CXX AR RANLIB NM STRIP
+export CROSS_PREFIX="${CROSS_PREFIX:-}"
+export PKG_CONFIG_PATH="${PKG_CONFIG_PATH:-$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig}"
+export PATH="$PREFIX/bin:$PATH"
+
+LIBS_DIR="$ROOT/libs"
+LIB_SCRIPTS=(
+    "$LIBS_DIR/libx264.sh"
+    "$LIBS_DIR/libx265.sh"
+    "$LIBS_DIR/libvpx.sh"
+    "$LIBS_DIR/libsvtav1.sh"
+    "$LIBS_DIR/libdav1d.sh"
+)
+
+for script in "${LIB_SCRIPTS[@]}"; do
+    if [[ ! -f "$script" ]]; then
+        echo "Missing library script: $script" >&2
+        exit 1
+    fi
+    bash "$script"
+done
+
+EXTRA_CFLAGS="-I$PREFIX/include"
+EXTRA_LDFLAGS="-L$PREFIX/lib"
+EXTRA_LIBS=""
+
+if [[ "$TARGET_INPUT" == "windows" ]]; then
+    if [[ "${MINGW_STATIC_RUNTIME:-1}" == "1" ]]; then
+        EXTRA_LDFLAGS="$EXTRA_LDFLAGS -static -static-libgcc -static-libstdc++"
+    fi
+fi
+
 FFMPEG_FLAGS=(
     --prefix="$PREFIX"
     --pkg-config-flags=--static
     --disable-shared
     --enable-static
+    --enable-gpl
     --disable-debug
     --disable-doc
     --disable-programs
     --enable-ffmpeg
     --enable-ffprobe
+    --enable-libx264
+    --enable-libx265
+    --enable-libvpx
+    --enable-libsvtav1
+    --enable-libdav1d
+    --extra-cflags="$EXTRA_CFLAGS"
+    --extra-ldflags="$EXTRA_LDFLAGS"
     --disable-autodetect
 )
+
+if [[ -n "$EXTRA_LIBS" ]]; then
+    FFMPEG_FLAGS+=(--extra-libs="$EXTRA_LIBS")
+fi
 
 if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
     tmp_flags=()
@@ -170,14 +214,6 @@ if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
         fi
     done
     FFMPEG_FLAGS=("${tmp_flags[@]}")
-fi
-
-if [[ "$TARGET_INPUT" == "windows" ]]; then
-    if [[ "${MINGW_STATIC_RUNTIME:-1}" == "1" ]]; then
-        FFMPEG_FLAGS+=(
-            --extra-ldflags="-static -static-libgcc -static-libstdc++"
-        )
-    fi
 fi
 
 ffdir="$SRC/ffmpeg"
