@@ -13,7 +13,7 @@ for var in ROOT TARGET_INPUT WORK SRC BUILD PREFIX NPROC CC CXX AR RANLIB NM STR
     require_var "$var"
 done
 
-export PKG_CONFIG_PATH="${PKG_CONFIG_PATH:-$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig}"
+export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 export PATH="$PREFIX/bin:$PATH"
 
 ensure_clone() {

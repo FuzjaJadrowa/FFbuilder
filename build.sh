@@ -141,13 +141,7 @@ set_toolchain() {
                     exit 1
                 fi
             fi
-            if [[ -z "${CROSS_PREFIX:-}" ]]; then
-                if cc_path="$(command -v "$CC" 2>/dev/null)"; then
-                    CROSS_PREFIX="$(dirname "$cc_path")/x86_64-w64-mingw32-"
-                else
-                    CROSS_PREFIX="x86_64-w64-mingw32-"
-                fi
-            fi
+            CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
             FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
             ;;
     esac
@@ -157,10 +151,18 @@ set_toolchain
 
 export ROOT TARGET_INPUT WORK SRC BUILD PREFIX ARTIFACTS NPROC CC CXX AR RANLIB NM STRIP
 export CROSS_PREFIX="${CROSS_PREFIX:-}"
-export PKG_CONFIG_PATH="${PKG_CONFIG_PATH:-$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig}"
+export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 export PATH="$PREFIX/bin:$PATH"
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
+    if ! command -v "$CC" >/dev/null 2>&1; then
+        for candidate in /mingw64/bin /c/msys64/mingw64/bin /c/tools/msys64/mingw64/bin; do
+            if [[ -x "$candidate/$CC" ]]; then
+                export PATH="$candidate:$PATH"
+                break
+            fi
+        done
+    fi
     mingw_bindir="$(dirname "$(command -v "$CC")")"
     if [[ -d "$mingw_bindir" ]]; then
         export PATH="$mingw_bindir:$PATH"
