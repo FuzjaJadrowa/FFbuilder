@@ -21,7 +21,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: config-log-linux
-          path: ffbuild/build/ffmpeg/config.log
+          path: ffbuild/**/config.log
+          if-no-files-found: ignore
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -44,7 +45,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: config-log-macos
-          path: ffbuild/build/ffmpeg/config.log
+          path: ffbuild/**/config.log
+          if-no-files-found: ignore
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -78,7 +80,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: config-log-windows
-          path: ffbuild/build/ffmpeg/config.log
+          path: ffbuild/**/config.log
+          if-no-files-found: ignore
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

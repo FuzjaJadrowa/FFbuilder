@@ -8,8 +8,15 @@ fi
 
 brew update
 brew install \
+    autoconf \
+    automake \
+    cmake \
     git \
+    libtool \
+    meson \
     nasm \
+    ninja \
     pkg-config \
+    python \
     yasm \
     zip
