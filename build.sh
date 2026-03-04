@@ -163,6 +163,14 @@ if [[ "$TARGET_INPUT" == "windows" ]]; then
             fi
         done
     fi
+    if ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
+        for candidate in "${MINGW_PREFIX:-/mingw64}/bin" /mingw64/bin /c/msys64/mingw64/bin /c/tools/msys64/mingw64/bin; do
+            if [[ -x "$candidate/${CROSS_PREFIX}strings" ]]; then
+                export PATH="$candidate:$PATH"
+                break
+            fi
+        done
+    fi
     mingw_bindir="$(dirname "$(command -v "$CC")")"
     if [[ -d "$mingw_bindir" ]]; then
         export PATH="$mingw_bindir:$PATH"
