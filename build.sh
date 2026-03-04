@@ -172,6 +172,14 @@ if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
     FFMPEG_FLAGS=("${tmp_flags[@]}")
 fi
 
+if [[ "$TARGET_INPUT" == "windows" ]]; then
+    if [[ "${MINGW_STATIC_RUNTIME:-1}" == "1" ]]; then
+        FFMPEG_FLAGS+=(
+            --extra-ldflags="-static -static-libgcc -static-libstdc++"
+        )
+    fi
+fi
+
 ffdir="$SRC/ffmpeg"
 if [[ ! -d "$ffdir/.git" ]]; then
     git clone --filter=blob:none "$FFMPEG_REPO" "$ffdir"
@@ -206,7 +214,7 @@ fi
 cp "$ffmpeg_bin" "$pkgdir/"
 cp "$ffprobe_bin" "$pkgdir/"
 
-if [[ "$TARGET_INPUT" == "windows" ]]; then
+if [[ "$TARGET_INPUT" == "windows" && "${BUNDLE_MINGW_RUNTIME_DLLS:-0}" == "1" ]]; then
     mingw_bindir="$(dirname "$(command -v "$CC")")"
     runtime_dlls=(
         libwinpthread-1.dll
