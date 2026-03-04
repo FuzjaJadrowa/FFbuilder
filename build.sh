@@ -80,6 +80,13 @@ set_toolchain() {
             FFMPEG_TARGET_FLAGS="--target-os=darwin --arch=$arch"
             ;;
         windows)
+            if command -v pacman >/dev/null 2>&1; then
+                if ! command -v x86_64-w64-mingw32-strip >/dev/null 2>&1 && \
+                   ! command -v x86_64-w64-mingw32-gcc-strip >/dev/null 2>&1 && \
+                   ! command -v gcc-strip >/dev/null 2>&1; then
+                    pacman -S --needed --noconfirm mingw-w64-x86_64-binutils
+                fi
+            fi
             export CC="${CC:-x86_64-w64-mingw32-gcc}"
             export CXX="${CXX:-x86_64-w64-mingw32-g++}"
             if [[ -z "${AR:-}" ]]; then
@@ -180,7 +187,7 @@ cd "$builddir"
 "$ffdir/configure" \
     "${FFMPEG_FLAGS[@]}" \
     $FFMPEG_TARGET_FLAGS \
-    --cc="$CC" --cxx="$CXX" --ar="$AR" --ranlib="$RANLIB" --nm="$NM"
+    --cc="$CC" --cxx="$CXX" --ar="$AR" --ranlib="$RANLIB" --nm="$NM" --strip="$STRIP"
 
 make -j"$NPROC" V=1
 make install
