@@ -141,7 +141,13 @@ set_toolchain() {
                     exit 1
                 fi
             fi
-            CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
+            if [[ -z "${CROSS_PREFIX:-}" ]]; then
+                if cc_path="$(command -v "$CC" 2>/dev/null)"; then
+                    CROSS_PREFIX="$(dirname "$cc_path")/x86_64-w64-mingw32-"
+                else
+                    CROSS_PREFIX="x86_64-w64-mingw32-"
+                fi
+            fi
             FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
             ;;
     esac

@@ -39,3 +39,24 @@ fi
 cmake "${cmake_args[@]}"
 cmake --build "$builddir" --config Release -j "$NPROC"
 cmake --install "$builddir"
+
+pcfile="$PREFIX/lib/pkgconfig/x265.pc"
+if [[ ! -f "$pcfile" ]]; then
+    mkdir -p "$(dirname "$pcfile")"
+    version="$(grep -E '^#define X265_VERSION' "$srcdir/source/x265.h" | awk '{print $3}' | tr -d '"')"
+    if [[ -z "$version" ]]; then
+        version="0.0"
+    fi
+    cat >"$pcfile" <<EOF
+prefix=$PREFIX
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+Name: x265
+Description: H.265/HEVC encoder
+Version: $version
+Libs: -L\${libdir} -lx265
+Cflags: -I\${includedir}
+EOF
+fi
