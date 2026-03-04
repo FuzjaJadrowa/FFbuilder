@@ -206,6 +206,22 @@ fi
 cp "$ffmpeg_bin" "$pkgdir/"
 cp "$ffprobe_bin" "$pkgdir/"
 
+if [[ "$TARGET_INPUT" == "windows" ]]; then
+    mingw_bindir="$(dirname "$(command -v "$CC")")"
+    runtime_dlls=(
+        libwinpthread-1.dll
+        libgcc_s_seh-1.dll
+        libstdc++-6.dll
+    )
+    for dll in "${runtime_dlls[@]}"; do
+        if [[ -f "$mingw_bindir/$dll" ]]; then
+            cp "$mingw_bindir/$dll" "$pkgdir/"
+        else
+            echo "Warning: $dll not found in $mingw_bindir" >&2
+        fi
+    done
+fi
+
 case "$TARGET_INPUT" in
     windows)
         (cd "$pkgdir" && zip -9 -r "$ARTIFACTS/ffmpeg-windows.zip" .)
