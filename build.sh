@@ -106,8 +106,34 @@ set_toolchain() {
                     exit 1
                 fi
             fi
-            export NM="${NM:-x86_64-w64-mingw32-nm}"
-            export STRIP="${STRIP:-x86_64-w64-mingw32-strip}"
+            if [[ -z "${NM:-}" ]]; then
+                if command -v x86_64-w64-mingw32-nm >/dev/null 2>&1; then
+                    export NM="x86_64-w64-mingw32-nm"
+                elif command -v x86_64-w64-mingw32-gcc-nm >/dev/null 2>&1; then
+                    export NM="x86_64-w64-mingw32-gcc-nm"
+                elif command -v gcc-nm >/dev/null 2>&1; then
+                    export NM="gcc-nm"
+                elif command -v nm >/dev/null 2>&1; then
+                    export NM="nm"
+                else
+                    echo "Missing MinGW nm (x86_64-w64-mingw32-nm). Install mingw-w64 binutils or set NM." >&2
+                    exit 1
+                fi
+            fi
+            if [[ -z "${STRIP:-}" ]]; then
+                if command -v x86_64-w64-mingw32-strip >/dev/null 2>&1; then
+                    export STRIP="x86_64-w64-mingw32-strip"
+                elif command -v x86_64-w64-mingw32-gcc-strip >/dev/null 2>&1; then
+                    export STRIP="x86_64-w64-mingw32-gcc-strip"
+                elif command -v gcc-strip >/dev/null 2>&1; then
+                    export STRIP="gcc-strip"
+                elif command -v strip >/dev/null 2>&1; then
+                    export STRIP="strip"
+                else
+                    echo "Missing MinGW strip (x86_64-w64-mingw32-strip). Install mingw-w64 binutils or set STRIP." >&2
+                    exit 1
+                fi
+            fi
             CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
             FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
             ;;
