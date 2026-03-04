@@ -154,6 +154,13 @@ export CROSS_PREFIX="${CROSS_PREFIX:-}"
 export PKG_CONFIG_PATH="${PKG_CONFIG_PATH:-$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig}"
 export PATH="$PREFIX/bin:$PATH"
 
+if [[ "$TARGET_INPUT" == "windows" ]]; then
+    mingw_bindir="$(dirname "$(command -v "$CC")")"
+    if [[ -d "$mingw_bindir" ]]; then
+        export PATH="$mingw_bindir:$PATH"
+    fi
+fi
+
 LIBS_DIR="$ROOT/libs"
 LIB_SCRIPTS=(
     "$LIBS_DIR/libx264.sh"

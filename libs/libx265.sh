@@ -26,10 +26,10 @@ cmake_args=(
     -DENABLE_SHARED=OFF
     -DENABLE_CLI=OFF
     -DENABLE_PIC=ON
-    -DCMAKE_C_COMPILER="$CC"
-    -DCMAKE_CXX_COMPILER="$CXX"
-    -DCMAKE_AR="$AR"
-    -DCMAKE_RANLIB="$RANLIB"
+    -DCMAKE_C_COMPILER="$(tool_path "$CC")"
+    -DCMAKE_CXX_COMPILER="$(tool_path "$CXX")"
+    -DCMAKE_AR="$(tool_path "$AR")"
+    -DCMAKE_RANLIB="$(tool_path "$RANLIB")"
 )
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then

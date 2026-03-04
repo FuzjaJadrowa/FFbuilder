@@ -41,3 +41,12 @@ is_windows_host() {
 is_cross_windows() {
     [[ "$TARGET_INPUT" == "windows" ]] && ! is_windows_host
 }
+
+tool_path() {
+    local tool="$1"
+    if command -v "$tool" >/dev/null 2>&1; then
+        command -v "$tool"
+    else
+        printf '%s' "$tool"
+    fi
+}

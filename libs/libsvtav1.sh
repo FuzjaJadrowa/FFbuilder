@@ -26,10 +26,10 @@ cmake_args=(
     -DBUILD_SHARED_LIBS=OFF
     -DBUILD_TESTING=OFF
     -DENABLE_NASM=ON
-    -DCMAKE_C_COMPILER="$CC"
-    -DCMAKE_CXX_COMPILER="$CXX"
-    -DCMAKE_AR="$AR"
-    -DCMAKE_RANLIB="$RANLIB"
+    -DCMAKE_C_COMPILER="$(tool_path "$CC")"
+    -DCMAKE_CXX_COMPILER="$(tool_path "$CXX")"
+    -DCMAKE_AR="$(tool_path "$AR")"
+    -DCMAKE_RANLIB="$(tool_path "$RANLIB")"
 )
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
