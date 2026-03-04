@@ -14,6 +14,7 @@ sudo apt-get install -y \
     meson \
     nasm \
     ninja-build \
+    perl \
     pkg-config \
     python3 \
     yasm \

@@ -16,6 +16,7 @@ brew install \
     meson \
     nasm \
     ninja \
+    perl \
     pkg-config \
     python \
     yasm \
