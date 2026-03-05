@@ -32,7 +32,9 @@ elif [[ "$TARGET_INPUT" == "windows" ]]; then
 fi
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
-    config_args+=(--cross-prefix="${CROSS_PREFIX:-x86_64-w64-mingw32-}")
+    if is_cross_windows; then
+        config_args+=(--cross-prefix="${CROSS_PREFIX:-x86_64-w64-mingw32-}")
+    fi
 else
     config_args+=(--enable-pic)
 fi

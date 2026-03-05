@@ -24,6 +24,14 @@ case "$TARGET_INPUT" in
     *) echo "Usage: $0 <linux|macos|windows>" >&2; exit 1 ;;
 esac
 
+HOST_UNAME="$(uname -s)"
+is_windows_host() {
+    case "$HOST_UNAME" in
+        MINGW*|MSYS*|CYGWIN*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 FFMPEG_REPO="${FFMPEG_REPO:-https://github.com/FFmpeg/FFmpeg.git}"
 FFMPEG_BRANCH="${FFMPEG_BRANCH:-release/8.0}"
 
@@ -141,8 +149,13 @@ set_toolchain() {
                     exit 1
                 fi
             fi
-            CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
-            FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
+            if is_windows_host; then
+                CROSS_PREFIX=""
+                FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64"
+            else
+                CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
+                FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
+            fi
             ;;
     esac
 }
@@ -163,7 +176,7 @@ if [[ "$TARGET_INPUT" == "windows" ]]; then
             fi
         done
     fi
-    if ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
+    if [[ -n "${CROSS_PREFIX:-}" ]] && ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
         for candidate in "${MINGW_PREFIX:-/mingw64}/bin" /mingw64/bin /c/msys64/mingw64/bin /c/tools/msys64/mingw64/bin; do
             if [[ -x "$candidate/${CROSS_PREFIX}strings" ]]; then
                 export PATH="$candidate:$PATH"
@@ -176,32 +189,34 @@ if [[ "$TARGET_INPUT" == "windows" ]]; then
         export PATH="$mingw_bindir:$PATH"
     fi
 
-    if ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
-        cc_path="$(command -v "$CC" || true)"
-        if [[ -n "$cc_path" ]]; then
-            cc_bindir="$(dirname "$cc_path")"
-            triplet="$("$CC" -dumpmachine 2>/dev/null || true)"
-            if [[ -z "$triplet" ]]; then
-                cc_base="$(basename "$CC")"
-                if [[ "$cc_base" == *-gcc ]]; then
-                    triplet="${cc_base%-gcc}"
-                elif [[ "$cc_base" == *-clang ]]; then
-                    triplet="${cc_base%-clang}"
-                elif [[ "$cc_base" == *-cc ]]; then
-                    triplet="${cc_base%-cc}"
+    if [[ -n "${CROSS_PREFIX:-}" ]]; then
+        if ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
+            cc_path="$(command -v "$CC" || true)"
+            if [[ -n "$cc_path" ]]; then
+                cc_bindir="$(dirname "$cc_path")"
+                triplet="$("$CC" -dumpmachine 2>/dev/null || true)"
+                if [[ -z "$triplet" ]]; then
+                    cc_base="$(basename "$CC")"
+                    if [[ "$cc_base" == *-gcc ]]; then
+                        triplet="${cc_base%-gcc}"
+                    elif [[ "$cc_base" == *-clang ]]; then
+                        triplet="${cc_base%-clang}"
+                    elif [[ "$cc_base" == *-cc ]]; then
+                        triplet="${cc_base%-cc}"
+                    fi
                 fi
-            fi
-            if [[ -z "$triplet" ]]; then
-                triplet="x86_64-w64-mingw32"
-            fi
-            if [[ -x "$cc_bindir/${triplet}-strings" ]]; then
-                export CROSS_PREFIX="$cc_bindir/${triplet}-"
-                FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
+                if [[ -z "$triplet" ]]; then
+                    triplet="x86_64-w64-mingw32"
+                fi
+                if [[ -x "$cc_bindir/${triplet}-strings" ]]; then
+                    export CROSS_PREFIX="$cc_bindir/${triplet}-"
+                    FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
+                fi
             fi
         fi
     fi
 
-    if ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
+    if ! is_windows_host && [[ -n "${CROSS_PREFIX:-}" ]] && ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
         echo "Missing ${CROSS_PREFIX}strings in PATH. Install MinGW binutils or set CROSS_PREFIX to the toolchain path." >&2
         exit 1
     fi
