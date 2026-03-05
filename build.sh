@@ -175,6 +175,36 @@ if [[ "$TARGET_INPUT" == "windows" ]]; then
     if [[ -d "$mingw_bindir" ]]; then
         export PATH="$mingw_bindir:$PATH"
     fi
+
+    if ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
+        cc_path="$(command -v "$CC" || true)"
+        if [[ -n "$cc_path" ]]; then
+            cc_bindir="$(dirname "$cc_path")"
+            triplet="$("$CC" -dumpmachine 2>/dev/null || true)"
+            if [[ -z "$triplet" ]]; then
+                cc_base="$(basename "$CC")"
+                if [[ "$cc_base" == *-gcc ]]; then
+                    triplet="${cc_base%-gcc}"
+                elif [[ "$cc_base" == *-clang ]]; then
+                    triplet="${cc_base%-clang}"
+                elif [[ "$cc_base" == *-cc ]]; then
+                    triplet="${cc_base%-cc}"
+                fi
+            fi
+            if [[ -z "$triplet" ]]; then
+                triplet="x86_64-w64-mingw32"
+            fi
+            if [[ -x "$cc_bindir/${triplet}-strings" ]]; then
+                export CROSS_PREFIX="$cc_bindir/${triplet}-"
+                FFMPEG_TARGET_FLAGS="--target-os=mingw32 --arch=x86_64 --enable-cross-compile --cross-prefix=$CROSS_PREFIX"
+            fi
+        fi
+    fi
+
+    if ! command -v "${CROSS_PREFIX}strings" >/dev/null 2>&1; then
+        echo "Missing ${CROSS_PREFIX}strings in PATH. Install MinGW binutils or set CROSS_PREFIX to the toolchain path." >&2
+        exit 1
+    fi
 fi
 
 LIBS_DIR="$ROOT/libs"

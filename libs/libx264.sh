@@ -21,17 +21,9 @@ config_args=(
 )
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
-    export PATH="/mingw64/bin:/clang64/bin:$PATH"
-
-    LOCAL_CROSS_PREFIX="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
-    if ! command -v "${LOCAL_CROSS_PREFIX}gcc" >/dev/null 2>&1; then
-        echo "Prefiks $LOCAL_CROSS_PREFIX nieznaleziony, próba kompilacji natywnej mingw..."
-        LOCAL_CROSS_PREFIX=""
-    fi
-
     config_args+=(
         --host=x86_64-w64-mingw32
-        --cross-prefix="$LOCAL_CROSS_PREFIX"
+        --cross-prefix="${CROSS_PREFIX:-x86_64-w64-mingw32-}"
     )
 else
     config_args+=(--enable-pic)
