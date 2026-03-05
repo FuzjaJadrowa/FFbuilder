@@ -44,6 +44,10 @@ is_cross_windows() {
 
 tool_path() {
     local tool="$1"
+    if is_windows_host && ! is_cross_windows; then
+        printf '%s' "$tool"
+        return
+    fi
     if command -v "$tool" >/dev/null 2>&1; then
         command -v "$tool"
     else
