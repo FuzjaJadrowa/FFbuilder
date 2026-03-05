@@ -45,6 +45,18 @@ is_cross_windows() {
 tool_path() {
     local tool="$1"
     if is_windows_host && ! is_cross_windows; then
+        if command -v "$tool" >/dev/null 2>&1; then
+            local p
+            p="$(command -v "$tool")"
+            if [[ -x "${p}.exe" ]]; then
+                cygpath -w "${p}.exe"
+                return
+            fi
+            if [[ -x "$p" ]]; then
+                cygpath -w "$p"
+                return
+            fi
+        fi
         printf '%s' "$tool"
         return
     fi
