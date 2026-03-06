@@ -246,7 +246,7 @@ EXTRA_LIBS=""
 if [[ "$TARGET_INPUT" == "windows" ]]; then
     if [[ "${MINGW_STATIC_RUNTIME:-1}" == "1" ]]; then
         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -static -static-libgcc -static-libstdc++"
-        EXTRA_LIBS="$EXTRA_LIBS -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic"
+        EXTRA_LIBS="$EXTRA_LIBS -Wl,-Bstatic -lwinpthread -lgcc -lgcc_eh -Wl,-Bdynamic"
     fi
 fi
 
