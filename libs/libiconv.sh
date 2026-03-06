@@ -15,6 +15,9 @@ cd "$srcdir"
 make distclean >/dev/null 2>&1 || true
 
 if [[ ! -x "./configure" ]]; then
+    if [[ -x "./gitsub.sh" ]]; then
+        ./gitsub.sh pull
+    fi
     if [[ -x "./autogen.sh" ]]; then
         NOCONFIGURE=1 ./autogen.sh
     elif [[ -f "configure.ac" || -f "configure.in" ]]; then
