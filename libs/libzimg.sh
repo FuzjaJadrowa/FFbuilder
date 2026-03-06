@@ -10,6 +10,7 @@ ZIMG_BRANCH="${ZIMG_BRANCH:-master}"
 srcdir="$SRC/zimg"
 ensure_clone "$srcdir" "$ZIMG_REPO"
 git_checkout "$srcdir" "$ZIMG_BRANCH"
+git -C "$srcdir" submodule update --init --recursive
 
 cd "$srcdir"
 make distclean >/dev/null 2>&1 || true
