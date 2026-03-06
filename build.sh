@@ -262,6 +262,10 @@ if [[ "$TARGET_INPUT" == "windows" ]]; then
     fi
 fi
 
+pc_exists() {
+    [[ -f "$PREFIX/lib/pkgconfig/$1.pc" || -f "$PREFIX/share/pkgconfig/$1.pc" ]]
+}
+
 FFMPEG_FLAGS=(
     --prefix="$PREFIX"
     --pkg-config-flags=--static
@@ -282,8 +286,6 @@ FFMPEG_FLAGS=(
     --enable-libtheora
     --enable-libwebp
     --enable-libzimg
-    --enable-libxavs2
-    --enable-libdavs2
     --enable-libxml2
     --enable-libx264
     --enable-libx265
@@ -294,6 +296,18 @@ FFMPEG_FLAGS=(
     --extra-ldflags="$EXTRA_LDFLAGS"
     --disable-autodetect
 )
+
+if pc_exists "xavs2"; then
+    FFMPEG_FLAGS+=(--enable-libxavs2)
+else
+    echo "Skipping libxavs2: missing pkg-config file."
+fi
+
+if pc_exists "davs2"; then
+    FFMPEG_FLAGS+=(--enable-libdavs2)
+else
+    echo "Skipping libdavs2: missing pkg-config file."
+fi
 
 if [[ -n "$EXTRA_LIBS" ]]; then
     FFMPEG_FLAGS+=(--extra-libs="$EXTRA_LIBS")

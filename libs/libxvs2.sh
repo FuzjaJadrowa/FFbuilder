@@ -52,12 +52,13 @@ if [[ -x "$buildroot/configure" ]]; then
         config_args+=(--host=x86_64-w64-mingw32)
     fi
     ./configure "${config_args[@]}"
+    extra_cflags="-I$buildroot -I$srcdir/source -I$srcdir/source/common"
     if [[ "$TARGET_INPUT" == "windows" ]]; then
-        make -j"$NPROC" CFLAGS+=" -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
+        make -j"$NPROC" CFLAGS+=" $extra_cflags -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
     elif [[ "$TARGET_INPUT" == "linux" ]]; then
-        make -j"$NPROC" CFLAGS+=" -fno-pie" LDFLAGS+=" -no-pie"
+        make -j"$NPROC" CFLAGS+=" $extra_cflags -fno-pie" LDFLAGS+=" -no-pie"
     else
-        make -j"$NPROC"
+        make -j"$NPROC" CFLAGS+=" $extra_cflags"
     fi
     make install
 else
@@ -79,12 +80,37 @@ else
         config_args+=(--host=x86_64-w64-mingw32)
     fi
     ./configure "${config_args[@]}"
+    extra_cflags="-I$srcdir/source -I$srcdir/source/common"
     if [[ "$TARGET_INPUT" == "windows" ]]; then
-        make -j"$NPROC" CFLAGS+=" -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
+        make -j"$NPROC" CFLAGS+=" $extra_cflags -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
     elif [[ "$TARGET_INPUT" == "linux" ]]; then
-        make -j"$NPROC" CFLAGS+=" -fno-pie" LDFLAGS+=" -no-pie"
+        make -j"$NPROC" CFLAGS+=" $extra_cflags -fno-pie" LDFLAGS+=" -no-pie"
     else
-        make -j"$NPROC"
+        make -j"$NPROC" CFLAGS+=" $extra_cflags"
     fi
     make install
+fi
+
+pc_file="$PREFIX/lib/pkgconfig/xavs2.pc"
+if [[ ! -f "$pc_file" ]]; then
+    mkdir -p "$PREFIX/lib/pkgconfig"
+    version="1.0.0"
+    if [[ -f "$srcdir/source/common/version.h" ]]; then
+        v="$(awk -F\" '/XAVS2_VERSION/ {print $2; exit}' "$srcdir/source/common/version.h")"
+        if [[ -n "${v:-}" ]]; then
+            version="$v"
+        fi
+    fi
+    cat >"$pc_file" <<EOF
+prefix=$PREFIX
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+Name: xavs2
+Description: AVS2 encoder (xavs2)
+Version: $version
+Libs: -L\${libdir} -lxavs2
+Cflags: -I\${includedir}
+EOF
 fi
