@@ -232,7 +232,6 @@ LIB_SCRIPTS=(
     "$LIBS_DIR/libopus.sh"
     "$LIBS_DIR/libmp3lame.sh"
     "$LIBS_DIR/libfdk-aac.sh"
-    "$LIBS_DIR/libsamplerate.sh"
     "$LIBS_DIR/libwebp.sh"
     "$LIBS_DIR/libzimg.sh"
     "$LIBS_DIR/libxvs2.sh"
@@ -286,7 +285,6 @@ FFMPEG_FLAGS=(
     --enable-libxavs2
     --enable-libdavs2
     --enable-libxml2
-    --enable-libsamplerate
     --enable-libx264
     --enable-libx265
     --enable-libvpx
