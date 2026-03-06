@@ -4,12 +4,34 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
+ICONV_SOURCE="${ICONV_SOURCE:-tarball}"
 ICONV_REPO="${ICONV_REPO:-https://git.savannah.gnu.org/git/libiconv.git}"
 ICONV_BRANCH="${ICONV_BRANCH:-master}"
+ICONV_VERSION="${ICONV_VERSION:-1.18}"
+ICONV_URL="${ICONV_URL:-https://ftp.gnu.org/gnu/libiconv/libiconv-${ICONV_VERSION}.tar.gz}"
 
-srcdir="$SRC/libiconv"
-ensure_clone "$srcdir" "$ICONV_REPO"
-git_checkout "$srcdir" "$ICONV_BRANCH"
+if [[ "$ICONV_SOURCE" == "git" ]]; then
+    srcdir="$SRC/libiconv"
+    ensure_clone "$srcdir" "$ICONV_REPO"
+    git_checkout "$srcdir" "$ICONV_BRANCH"
+else
+    srcdir="$SRC/libiconv-$ICONV_VERSION"
+    tarball="$SRC/libiconv-$ICONV_VERSION.tar.gz"
+    if [[ ! -d "$srcdir" ]]; then
+        mkdir -p "$SRC"
+        if [[ ! -f "$tarball" ]]; then
+            if command -v curl >/dev/null 2>&1; then
+                curl -L -o "$tarball" "$ICONV_URL"
+            elif command -v wget >/dev/null 2>&1; then
+                wget -O "$tarball" "$ICONV_URL"
+            else
+                echo "Missing curl/wget to download $ICONV_URL" >&2
+                exit 1
+            fi
+        fi
+        tar -xf "$tarball" -C "$SRC"
+    fi
+fi
 
 cd "$srcdir"
 make distclean >/dev/null 2>&1 || true
@@ -36,5 +58,5 @@ if [[ "$TARGET_INPUT" == "windows" ]]; then
 fi
 
 ./configure "${config_args[@]}"
-make -j"$NPROC"
+GROFF="${GROFF:-:}" MAKEINFO="${MAKEINFO:-:}" make -j"$NPROC"
 make install
