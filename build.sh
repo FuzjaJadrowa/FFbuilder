@@ -343,7 +343,7 @@ fi
 cp "$ffmpeg_bin" "$pkgdir/"
 cp "$ffprobe_bin" "$pkgdir/"
 
-if [[ "$TARGET_INPUT" == "windows" && "${BUNDLE_MINGW_RUNTIME_DLLS:-0}" == "1" ]]; then
+if [[ "$TARGET_INPUT" == "windows" && "${BUNDLE_MINGW_RUNTIME_DLLS:-1}" == "1" ]]; then
     mingw_bindir="$(dirname "$(command -v "$CC")")"
     runtime_dlls=(
         libwinpthread-1.dll

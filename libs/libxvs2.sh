@@ -17,7 +17,28 @@ if [[ "$TARGET_INPUT" == "macos" ]]; then
 fi
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
-    export CFLAGS="${CFLAGS:-} -Wno-error=incompatible-pointer-types"
+    git -C "$srcdir" apply --verbose - <<'PATCH' || true
+diff --git a/source/encoder/encoder.c b/source/encoder/encoder.c
+index 9e82d8c..c98c3b1 100644
+--- a/source/encoder/encoder.c
++++ b/source/encoder/encoder.c
+@@ -630,7 +630,8 @@ static void encoder_aec_prepare_one_frame(xavs2_t *h)
+     }
+ }
+ 
+-static void *encoder_aec_encode_one_frame(xavs2_t *h)
++static void *encoder_aec_encode_one_frame(void *arg)
+ {
++    xavs2_t *h = (xavs2_t *)arg;
+     pix32u_t pixel_cnt;
+     int ret;
+ 
+PATCH
+fi
+
+if [[ "$TARGET_INPUT" == "linux" ]]; then
+    export CFLAGS="${CFLAGS:-} -fno-pie"
+    export LDFLAGS="${LDFLAGS:-} -no-pie"
 fi
 
 buildroot="$srcdir/build/linux"
@@ -31,7 +52,13 @@ if [[ -x "$buildroot/configure" ]]; then
         config_args+=(--host=x86_64-w64-mingw32)
     fi
     ./configure "${config_args[@]}"
-    make -j"$NPROC"
+    if [[ "$TARGET_INPUT" == "windows" ]]; then
+        make -j"$NPROC" CFLAGS+=" -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
+    elif [[ "$TARGET_INPUT" == "linux" ]]; then
+        make -j"$NPROC" CFLAGS+=" -fno-pie" LDFLAGS+=" -no-pie"
+    else
+        make -j"$NPROC"
+    fi
     make install
 else
     cd "$srcdir"
@@ -52,6 +79,12 @@ else
         config_args+=(--host=x86_64-w64-mingw32)
     fi
     ./configure "${config_args[@]}"
-    make -j"$NPROC"
+    if [[ "$TARGET_INPUT" == "windows" ]]; then
+        make -j"$NPROC" CFLAGS+=" -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
+    elif [[ "$TARGET_INPUT" == "linux" ]]; then
+        make -j"$NPROC" CFLAGS+=" -fno-pie" LDFLAGS+=" -no-pie"
+    else
+        make -j"$NPROC"
+    fi
     make install
 fi
