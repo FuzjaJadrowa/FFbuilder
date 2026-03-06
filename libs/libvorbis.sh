@@ -28,10 +28,7 @@ config_args=(
     --enable-static
     --with-ogg="$PREFIX"
     --disable-oggtest
-    --disable-vorbistest
     --disable-examples
-    --disable-asm
-    --disable-spec
 )
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
@@ -39,5 +36,17 @@ if [[ "$TARGET_INPUT" == "windows" ]]; then
 fi
 
 ./configure "${config_args[@]}"
-make -j"$NPROC"
-make install
+make -C lib -j"$NPROC" libvorbis.la libvorbisenc.la libvorbisfile.la
+
+install -d "$PREFIX/lib" "$PREFIX/include/vorbis" "$PREFIX/lib/pkgconfig"
+
+for lib in libvorbis libvorbisenc libvorbisfile; do
+    if [[ -f "$srcdir/lib/.libs/${lib}.a" ]]; then
+        install -c -m 644 "$srcdir/lib/.libs/${lib}.a" "$PREFIX/lib/"
+    fi
+done
+
+install -c -m 644 "$srcdir/include/vorbis/"*.h "$PREFIX/include/vorbis/"
+install -c -m 644 "$srcdir/vorbis.pc" "$PREFIX/lib/pkgconfig/"
+install -c -m 644 "$srcdir/vorbisenc.pc" "$PREFIX/lib/pkgconfig/"
+install -c -m 644 "$srcdir/vorbisfile.pc" "$PREFIX/lib/pkgconfig/"
