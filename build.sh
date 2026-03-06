@@ -224,6 +224,19 @@ fi
 
 LIBS_DIR="$ROOT/libs"
 LIB_SCRIPTS=(
+    "$LIBS_DIR/libiconv.sh"
+    "$LIBS_DIR/libxml2.sh"
+    "$LIBS_DIR/libogg.sh"
+    "$LIBS_DIR/libvorbis.sh"
+    "$LIBS_DIR/libtheora.sh"
+    "$LIBS_DIR/libopus.sh"
+    "$LIBS_DIR/libmp3lame.sh"
+    "$LIBS_DIR/libfdk-aac.sh"
+    "$LIBS_DIR/libsamplerate.sh"
+    "$LIBS_DIR/libwebp.sh"
+    "$LIBS_DIR/libzimg.sh"
+    "$LIBS_DIR/libxvs2.sh"
+    "$LIBS_DIR/libdavs2.sh"
     "$LIBS_DIR/libx264.sh"
     "$LIBS_DIR/libx265.sh"
     "$LIBS_DIR/libvpx.sh"
@@ -256,11 +269,24 @@ FFMPEG_FLAGS=(
     --disable-shared
     --enable-static
     --enable-gpl
+    --enable-version3
+    --enable-nonfree
     --disable-debug
     --disable-doc
     --disable-programs
     --enable-ffmpeg
     --enable-ffprobe
+    --enable-libmp3lame
+    --enable-libfdk-aac
+    --enable-libopus
+    --enable-libvorbis
+    --enable-libtheora
+    --enable-libwebp
+    --enable-libzimg
+    --enable-libxavs2
+    --enable-libdavs2
+    --enable-libxml2
+    --enable-libsamplerate
     --enable-libx264
     --enable-libx265
     --enable-libvpx
