@@ -266,6 +266,15 @@ pc_exists() {
     [[ -f "$PREFIX/lib/pkgconfig/$1.pc" || -f "$PREFIX/share/pkgconfig/$1.pc" ]]
 }
 
+pc_has() {
+    local expr="$1"
+    if command -v pkg-config >/dev/null 2>&1; then
+        pkg-config --exists "$expr"
+        return $?
+    fi
+    pc_exists "${expr%% *}"
+}
+
 FFMPEG_FLAGS=(
     --prefix="$PREFIX"
     --pkg-config-flags=--static
@@ -297,16 +306,16 @@ FFMPEG_FLAGS=(
     --disable-autodetect
 )
 
-if pc_exists "xavs2"; then
+if pc_has "xavs2"; then
     FFMPEG_FLAGS+=(--enable-libxavs2)
 else
     echo "Skipping libxavs2: missing pkg-config file."
 fi
 
-if pc_exists "davs2"; then
+if pc_has "davs2 >= 1.6.0"; then
     FFMPEG_FLAGS+=(--enable-libdavs2)
 else
-    echo "Skipping libdavs2: missing pkg-config file."
+    echo "Skipping libdavs2: missing or too old pkg-config file."
 fi
 
 if [[ -n "$EXTRA_LIBS" ]]; then

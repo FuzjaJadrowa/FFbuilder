@@ -36,29 +36,38 @@ index 9e82d8c..c98c3b1 100644
 PATCH
 fi
 
-if [[ "$TARGET_INPUT" == "linux" ]]; then
-    export CFLAGS="${CFLAGS:-} -fno-pie"
-    export LDFLAGS="${LDFLAGS:-} -no-pie"
-fi
-
 buildroot="$srcdir/build/linux"
 if [[ -x "$buildroot/configure" ]]; then
     cd "$buildroot"
     make distclean >/dev/null 2>&1 || true
     config_args=(
         --prefix="$PREFIX"
+        --disable-cli
     )
+    if [[ "$TARGET_INPUT" == "linux" ]]; then
+        config_args+=(--extra-cflags="-fno-pie" --extra-ldflags="-no-pie")
+    fi
     if [[ "$TARGET_INPUT" == "windows" ]]; then
         config_args+=(--host=x86_64-w64-mingw32)
     fi
-    ./configure "${config_args[@]}"
-    extra_cflags="-I$buildroot -I$srcdir/source -I$srcdir/source/common"
     if [[ "$TARGET_INPUT" == "windows" ]]; then
-        make -j"$NPROC" CFLAGS+=" $extra_cflags -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
-    elif [[ "$TARGET_INPUT" == "linux" ]]; then
-        make -j"$NPROC" CFLAGS+=" $extra_cflags -fno-pie" LDFLAGS+=" -no-pie"
+        config_args+=(--extra-cflags="-Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types")
+    fi
+    ./configure "${config_args[@]}"
+    base_cflags="$(awk -F= '/^CFLAGS=/{sub(/^CFLAGS=/, ""); print; exit}' config.mak || true)"
+    base_ldflags="$(awk -F= '/^LDFLAGS=/{sub(/^LDFLAGS=/, ""); print; exit}' config.mak || true)"
+    extra_includes="-I$buildroot -I$srcdir/source/encoder -I$srcdir/source/common/x86 -I$srcdir/source/common/vec -I$srcdir/source/test"
+    if [[ "$TARGET_INPUT" == "linux" ]]; then
+        base_cflags="$base_cflags -fno-pie"
+        base_ldflags="$base_ldflags -no-pie"
+    fi
+    if [[ "$TARGET_INPUT" == "windows" ]]; then
+        base_cflags="$base_cflags -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
+    fi
+    if [[ -n "$base_cflags" ]]; then
+        make -j"$NPROC" CFLAGS="$base_cflags $extra_includes" LDFLAGS="$base_ldflags"
     else
-        make -j"$NPROC" CFLAGS+=" $extra_cflags"
+        make -j"$NPROC"
     fi
     make install
 else
@@ -75,18 +84,32 @@ else
         --prefix="$PREFIX"
         --disable-shared
         --enable-static
+        --disable-cli
     )
+    if [[ "$TARGET_INPUT" == "linux" ]]; then
+        config_args+=(--extra-cflags="-fno-pie" --extra-ldflags="-no-pie")
+    fi
     if [[ "$TARGET_INPUT" == "windows" ]]; then
         config_args+=(--host=x86_64-w64-mingw32)
     fi
-    ./configure "${config_args[@]}"
-    extra_cflags="-I$srcdir/source -I$srcdir/source/common"
     if [[ "$TARGET_INPUT" == "windows" ]]; then
-        make -j"$NPROC" CFLAGS+=" $extra_cflags -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
-    elif [[ "$TARGET_INPUT" == "linux" ]]; then
-        make -j"$NPROC" CFLAGS+=" $extra_cflags -fno-pie" LDFLAGS+=" -no-pie"
+        config_args+=(--extra-cflags="-Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types")
+    fi
+    ./configure "${config_args[@]}"
+    base_cflags="$(awk -F= '/^CFLAGS=/{sub(/^CFLAGS=/, ""); print; exit}' config.mak || true)"
+    base_ldflags="$(awk -F= '/^LDFLAGS=/{sub(/^LDFLAGS=/, ""); print; exit}' config.mak || true)"
+    extra_includes="-I$srcdir/source/encoder -I$srcdir/source/common/x86 -I$srcdir/source/common/vec -I$srcdir/source/test"
+    if [[ "$TARGET_INPUT" == "linux" ]]; then
+        base_cflags="$base_cflags -fno-pie"
+        base_ldflags="$base_ldflags -no-pie"
+    fi
+    if [[ "$TARGET_INPUT" == "windows" ]]; then
+        base_cflags="$base_cflags -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types"
+    fi
+    if [[ -n "$base_cflags" ]]; then
+        make -j"$NPROC" CFLAGS="$base_cflags $extra_includes" LDFLAGS="$base_ldflags"
     else
-        make -j"$NPROC" CFLAGS+=" $extra_cflags"
+        make -j"$NPROC"
     fi
     make install
 fi
