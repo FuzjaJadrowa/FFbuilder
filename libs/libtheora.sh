@@ -28,6 +28,8 @@ config_args=(
     --enable-static
     --with-ogg="$PREFIX"
     --with-vorbis="$PREFIX"
+    --disable-examples
+    --disable-doc
 )
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then

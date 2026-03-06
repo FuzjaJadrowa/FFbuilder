@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 OPUS_REPO="${OPUS_REPO:-https://github.com/xiph/opus.git}"
-OPUS_BRANCH="${OPUS_BRANCH:-master}"
+OPUS_BRANCH="${OPUS_BRANCH:-main}"
 
 srcdir="$SRC/opus"
 ensure_clone "$srcdir" "$OPUS_REPO"

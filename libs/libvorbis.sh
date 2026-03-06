@@ -27,6 +27,11 @@ config_args=(
     --disable-shared
     --enable-static
     --with-ogg="$PREFIX"
+    --disable-oggtest
+    --disable-vorbistest
+    --disable-examples
+    --disable-asm
+    --disable-spec
 )
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
