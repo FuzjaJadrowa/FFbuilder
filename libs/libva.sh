@@ -69,6 +69,11 @@ fi
 pc_patch_static "$pc_drm" || true
 
 if [[ ! -f "$PREFIX/lib/libva.a" ]]; then
-    echo "libva.a not found in $PREFIX/lib; static VAAPI not available." >&2
-    exit 1
+    echo "libva.a not found in $PREFIX/lib; disabling VAAPI to avoid shared lib dependency." >&2
+    rm -f \
+        "$PREFIX/lib/pkgconfig/libva.pc" \
+        "$PREFIX/share/pkgconfig/libva.pc" \
+        "$PREFIX/lib/pkgconfig/libva-drm.pc" \
+        "$PREFIX/share/pkgconfig/libva-drm.pc"
+    exit 0
 fi

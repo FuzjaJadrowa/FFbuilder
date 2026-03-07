@@ -12,6 +12,7 @@ sudo apt-get install -y \
     libtool \
     libtool-bin \
     meson \
+    musl-tools \
     nasm \
     ninja-build \
     perl \

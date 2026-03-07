@@ -70,8 +70,13 @@ set_toolchain() {
 
     case "$TARGET_INPUT" in
         linux)
-            export CC="${CC:-gcc}"
-            export CXX="${CXX:-g++}"
+            if [[ "${LINUX_TOOLCHAIN:-}" == "musl" ]]; then
+                export CC="${CC:-musl-gcc}"
+                export CXX="${CXX:-musl-g++}"
+            else
+                export CC="${CC:-gcc}"
+                export CXX="${CXX:-g++}"
+            fi
             export AR="${AR:-ar}"
             export RANLIB="${RANLIB:-ranlib}"
             export NM="${NM:-nm}"
@@ -241,15 +246,26 @@ LIB_SCRIPTS=(
     "$LIBS_DIR/libdav1d.sh"
 )
 
+ENABLE_VAAPI="${ENABLE_VAAPI:-0}"
+ENABLE_NVCODEC="${ENABLE_NVCODEC:-0}"
+
 if [[ "$TARGET_INPUT" == "linux" ]]; then
-    LIB_SCRIPTS+=(
-        "$LIBS_DIR/libdrm.sh"
-        "$LIBS_DIR/libva.sh"
-    )
+    if [[ "$ENABLE_VAAPI" == "1" ]]; then
+        LIB_SCRIPTS+=(
+            "$LIBS_DIR/libdrm.sh"
+            "$LIBS_DIR/libva.sh"
+        )
+    else
+        echo "Skipping VAAPI build on Linux: set ENABLE_VAAPI=1 to enable." >&2
+    fi
 fi
 
 if [[ "$TARGET_INPUT" == "windows" || "$TARGET_INPUT" == "linux" ]]; then
-    LIB_SCRIPTS+=("$LIBS_DIR/libnvcodec.sh")
+    if [[ "$TARGET_INPUT" == "windows" || "$ENABLE_NVCODEC" == "1" ]]; then
+        LIB_SCRIPTS+=("$LIBS_DIR/libnvcodec.sh")
+    else
+        echo "Skipping NVENC/NVDEC headers on Linux: set ENABLE_NVCODEC=1 to enable." >&2
+    fi
 fi
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
@@ -267,6 +283,10 @@ done
 EXTRA_CFLAGS="-I$PREFIX/include"
 EXTRA_LDFLAGS="-L$PREFIX/lib"
 EXTRA_LIBS=""
+
+if [[ "$TARGET_INPUT" == "linux" && "${LINUX_TOOLCHAIN:-}" == "musl" ]]; then
+    EXTRA_LDFLAGS="$EXTRA_LDFLAGS -static"
+fi
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
     if [[ "${MINGW_STATIC_RUNTIME:-1}" == "1" ]]; then
@@ -340,23 +360,27 @@ if [[ "$TARGET_INPUT" == "macos" ]]; then
 fi
 
 if [[ "$TARGET_INPUT" == "linux" ]]; then
-    if pc_exists "libdrm"; then
-        FFMPEG_FLAGS+=(--enable-libdrm)
-    else
-        echo "Skipping libdrm: libdrm not found via pkg-config." >&2
-    fi
-    if pc_exists "libva"; then
-        FFMPEG_FLAGS+=(--enable-vaapi)
-    else
-        echo "Skipping VAAPI: libva not found via pkg-config." >&2
+    if [[ "$ENABLE_VAAPI" == "1" ]]; then
+        if pc_exists "libdrm"; then
+            FFMPEG_FLAGS+=(--enable-libdrm)
+        else
+            echo "Skipping libdrm: libdrm not found via pkg-config." >&2
+        fi
+        if pc_exists "libva"; then
+            FFMPEG_FLAGS+=(--enable-vaapi)
+        else
+            echo "Skipping VAAPI: libva not found via pkg-config." >&2
+        fi
     fi
 fi
 
 if [[ "$TARGET_INPUT" != "macos" ]]; then
-    if pc_exists "ffnvcodec"; then
-        FFMPEG_FLAGS+=(--enable-ffnvcodec --enable-nvenc --enable-nvdec --enable-cuvid)
-    else
-        echo "Skipping NVENC/NVDEC: nv-codec-headers not found via pkg-config." >&2
+    if [[ "$TARGET_INPUT" == "windows" || "$ENABLE_NVCODEC" == "1" ]]; then
+        if pc_exists "ffnvcodec"; then
+            FFMPEG_FLAGS+=(--enable-ffnvcodec --enable-nvenc --enable-nvdec --enable-cuvid)
+        else
+            echo "Skipping NVENC/NVDEC: nv-codec-headers not found via pkg-config." >&2
+        fi
     fi
 fi
 
