@@ -241,6 +241,21 @@ LIB_SCRIPTS=(
     "$LIBS_DIR/libdav1d.sh"
 )
 
+if [[ "$TARGET_INPUT" == "linux" ]]; then
+    LIB_SCRIPTS+=(
+        "$LIBS_DIR/libdrm.sh"
+        "$LIBS_DIR/libva.sh"
+    )
+fi
+
+if [[ "$TARGET_INPUT" == "windows" || "$TARGET_INPUT" == "linux" ]]; then
+    LIB_SCRIPTS+=("$LIBS_DIR/libnvcodec.sh")
+fi
+
+if [[ "$TARGET_INPUT" == "windows" ]]; then
+    LIB_SCRIPTS+=("$LIBS_DIR/libamf.sh")
+fi
+
 for script in "${LIB_SCRIPTS[@]}"; do
     if [[ ! -f "$script" ]]; then
         echo "Missing library script: $script" >&2
@@ -304,6 +319,66 @@ FFMPEG_FLAGS=(
     --disable-autodetect
 )
 
+ffdir="$SRC/ffmpeg"
+if [[ ! -d "$ffdir/.git" ]]; then
+    git clone --filter=blob:none "$FFMPEG_REPO" "$ffdir"
+fi
+git -C "$ffdir" fetch --depth 1 origin "$FFMPEG_BRANCH" || true
+git -C "$ffdir" checkout "$FFMPEG_BRANCH"
+
+ffmpeg_help="$("$ffdir/configure" --help)"
+ffmpeg_flag_supported() {
+    echo "$ffmpeg_help" | grep -q -F -- "$1"
+}
+
+if [[ "$TARGET_INPUT" == "windows" ]]; then
+    if ffmpeg_flag_supported "--enable-dxva2"; then
+        FFMPEG_FLAGS+=(--enable-dxva2)
+    fi
+    if ffmpeg_flag_supported "--enable-d3d11va"; then
+        FFMPEG_FLAGS+=(--enable-d3d11va)
+    fi
+    if [[ -d "$PREFIX/include/AMF" ]]; then
+        if ffmpeg_flag_supported "--enable-amf"; then
+            FFMPEG_FLAGS+=(--enable-amf)
+        else
+            echo "Skipping AMF: FFmpeg does not support --enable-amf in this branch." >&2
+        fi
+    else
+        echo "Skipping AMF: headers not installed in $PREFIX/include/AMF." >&2
+    fi
+fi
+
+if [[ "$TARGET_INPUT" == "macos" ]]; then
+    if ffmpeg_flag_supported "--enable-videotoolbox"; then
+        FFMPEG_FLAGS+=(--enable-videotoolbox)
+    fi
+fi
+
+if [[ "$TARGET_INPUT" == "linux" ]]; then
+    if pc_has "libva"; then
+        if ffmpeg_flag_supported "--enable-vaapi"; then
+            FFMPEG_FLAGS+=(--enable-vaapi)
+        else
+            echo "Skipping VAAPI: FFmpeg does not support --enable-vaapi in this branch." >&2
+        fi
+    else
+        echo "Skipping VAAPI: libva not found via pkg-config." >&2
+    fi
+fi
+
+if [[ "$TARGET_INPUT" != "macos" ]]; then
+    if pc_has "ffnvcodec"; then
+        for flag in --enable-ffnvcodec --enable-nvenc --enable-nvdec --enable-cuvid; do
+            if ffmpeg_flag_supported "$flag"; then
+                FFMPEG_FLAGS+=("$flag")
+            fi
+        done
+    else
+        echo "Skipping NVENC/NVDEC: nv-codec-headers not found via pkg-config." >&2
+    fi
+fi
+
 if [[ -n "$EXTRA_LIBS" ]]; then
     FFMPEG_FLAGS+=(--extra-libs="$EXTRA_LIBS")
 fi
@@ -317,13 +392,6 @@ if [[ "${FFMPEG_AUTODETECT:-0}" == "1" ]]; then
     done
     FFMPEG_FLAGS=("${tmp_flags[@]}")
 fi
-
-ffdir="$SRC/ffmpeg"
-if [[ ! -d "$ffdir/.git" ]]; then
-    git clone --filter=blob:none "$FFMPEG_REPO" "$ffdir"
-fi
-git -C "$ffdir" fetch --depth 1 origin "$FFMPEG_BRANCH" || true
-git -C "$ffdir" checkout "$FFMPEG_BRANCH"
 
 builddir="$BUILD/ffmpeg"
 rm -rf "$builddir"
