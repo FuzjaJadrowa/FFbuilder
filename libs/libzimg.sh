@@ -64,7 +64,21 @@ make -j"$NPROC"
 make install
 
 pc_file="$PREFIX/lib/pkgconfig/zimg.pc"
-if [[ ! -f "$pc_file" && ! -f "$PREFIX/share/pkgconfig/zimg.pc" ]]; then
+if [[ ! -f "$pc_file" && -f "$PREFIX/share/pkgconfig/zimg.pc" ]]; then
+    pc_file="$PREFIX/share/pkgconfig/zimg.pc"
+fi
+
+if [[ -f "$pc_file" ]]; then
+    if ! grep -q -- "-lm" "$pc_file"; then
+        if grep -q "^Libs.private:" "$pc_file"; then
+            tmp_pc="$(mktemp)"
+            awk '{ if ($0 ~ /^Libs.private:/) { print $0 " -lm"; next } print }' "$pc_file" >"$tmp_pc"
+            mv "$tmp_pc" "$pc_file"
+        else
+            echo "Libs.private: -lm" >>"$pc_file"
+        fi
+    fi
+else
     mkdir -p "$PREFIX/lib/pkgconfig"
     version="$ZIMG_VERSION"
     for header in \
@@ -79,7 +93,7 @@ if [[ ! -f "$pc_file" && ! -f "$PREFIX/share/pkgconfig/zimg.pc" ]]; then
             fi
         fi
     done
-    cat >"$pc_file" <<EOF
+    cat >"$PREFIX/lib/pkgconfig/zimg.pc" <<EOF
 prefix=$PREFIX
 exec_prefix=\${prefix}
 libdir=\${exec_prefix}/lib
@@ -89,6 +103,7 @@ Name: zimg
 Description: zimg scaling library
 Version: $version
 Libs: -L\${libdir} -lzimg
+Libs.private: -lstdc++ -lm
 Cflags: -I\${includedir}
 EOF
 fi
