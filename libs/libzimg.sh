@@ -62,3 +62,33 @@ fi
 ./configure "${config_args[@]}"
 make -j"$NPROC"
 make install
+
+pc_file="$PREFIX/lib/pkgconfig/zimg.pc"
+if [[ ! -f "$pc_file" && ! -f "$PREFIX/share/pkgconfig/zimg.pc" ]]; then
+    mkdir -p "$PREFIX/lib/pkgconfig"
+    version="$ZIMG_VERSION"
+    for header in \
+        "$srcdir/src/zimg/version.h" \
+        "$srcdir/src/zimg/common/version.h" \
+        "$srcdir/version.h"; do
+        if [[ -f "$header" ]]; then
+            v="$(awk -F\" '/ZIMG_VERSION/ {print $2; exit}' "$header")"
+            if [[ -n "${v:-}" ]]; then
+                version="$v"
+                break
+            fi
+        fi
+    done
+    cat >"$pc_file" <<EOF
+prefix=$PREFIX
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+Name: zimg
+Description: zimg scaling library
+Version: $version
+Libs: -L\${libdir} -lzimg
+Cflags: -I\${includedir}
+EOF
+fi

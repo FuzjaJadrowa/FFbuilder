@@ -271,7 +271,7 @@ EXTRA_LIBS=""
 if [[ "$TARGET_INPUT" == "windows" ]]; then
     if [[ "${MINGW_STATIC_RUNTIME:-1}" == "1" ]]; then
         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -static -static-libgcc -static-libstdc++"
-        EXTRA_LIBS="$EXTRA_LIBS -Wl,-Bstatic -lwinpthread -lgcc -lgcc_eh -Wl,-Bdynamic"
+        EXTRA_LIBS="$EXTRA_LIBS -Wl,-Bstatic -lwinpthread -lstdc++ -lgcc -lgcc_eh -Wl,-Bdynamic"
     fi
 fi
 
@@ -326,42 +326,27 @@ fi
 git -C "$ffdir" fetch --depth 1 origin "$FFMPEG_BRANCH" || true
 git -C "$ffdir" checkout "$FFMPEG_BRANCH"
 
-ffmpeg_help="$("$ffdir/configure" --help)"
-ffmpeg_flag_supported() {
-    echo "$ffmpeg_help" | grep -q -F -- "$1"
-}
-
 if [[ "$TARGET_INPUT" == "windows" ]]; then
-    if ffmpeg_flag_supported "--enable-dxva2"; then
-        FFMPEG_FLAGS+=(--enable-dxva2)
-    fi
-    if ffmpeg_flag_supported "--enable-d3d11va"; then
-        FFMPEG_FLAGS+=(--enable-d3d11va)
-    fi
+    FFMPEG_FLAGS+=(--enable-dxva2 --enable-d3d11va)
     if [[ -d "$PREFIX/include/AMF" ]]; then
-        if ffmpeg_flag_supported "--enable-amf"; then
-            FFMPEG_FLAGS+=(--enable-amf)
-        else
-            echo "Skipping AMF: FFmpeg does not support --enable-amf in this branch." >&2
-        fi
+        FFMPEG_FLAGS+=(--enable-amf)
     else
         echo "Skipping AMF: headers not installed in $PREFIX/include/AMF." >&2
     fi
 fi
 
 if [[ "$TARGET_INPUT" == "macos" ]]; then
-    if ffmpeg_flag_supported "--enable-videotoolbox"; then
-        FFMPEG_FLAGS+=(--enable-videotoolbox)
-    fi
+    FFMPEG_FLAGS+=(--enable-videotoolbox)
 fi
 
 if [[ "$TARGET_INPUT" == "linux" ]]; then
+    if pc_has "libdrm"; then
+        FFMPEG_FLAGS+=(--enable-libdrm)
+    else
+        echo "Skipping libdrm: libdrm not found via pkg-config." >&2
+    fi
     if pc_has "libva"; then
-        if ffmpeg_flag_supported "--enable-vaapi"; then
-            FFMPEG_FLAGS+=(--enable-vaapi)
-        else
-            echo "Skipping VAAPI: FFmpeg does not support --enable-vaapi in this branch." >&2
-        fi
+        FFMPEG_FLAGS+=(--enable-vaapi)
     else
         echo "Skipping VAAPI: libva not found via pkg-config." >&2
     fi
@@ -369,11 +354,7 @@ fi
 
 if [[ "$TARGET_INPUT" != "macos" ]]; then
     if pc_has "ffnvcodec"; then
-        for flag in --enable-ffnvcodec --enable-nvenc --enable-nvdec --enable-cuvid; do
-            if ffmpeg_flag_supported "$flag"; then
-                FFMPEG_FLAGS+=("$flag")
-            fi
-        done
+        FFMPEG_FLAGS+=(--enable-ffnvcodec --enable-nvenc --enable-nvdec --enable-cuvid)
     else
         echo "Skipping NVENC/NVDEC: nv-codec-headers not found via pkg-config." >&2
     fi
@@ -420,7 +401,7 @@ fi
 cp "$ffmpeg_bin" "$pkgdir/"
 cp "$ffprobe_bin" "$pkgdir/"
 
-if [[ "$TARGET_INPUT" == "windows" && "${BUNDLE_MINGW_RUNTIME_DLLS:-1}" == "1" ]]; then
+if [[ "$TARGET_INPUT" == "windows" && "${BUNDLE_MINGW_RUNTIME_DLLS:-0}" == "1" ]]; then
     mingw_bindir="$(dirname "$(command -v "$CC")")"
     runtime_dlls=(
         libwinpthread-1.dll

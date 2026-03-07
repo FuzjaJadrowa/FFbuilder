@@ -15,19 +15,29 @@ fi
 srcdir="$SRC/amf"
 ensure_clone "$srcdir" "$AMF_REPO"
 git_checkout "$srcdir" "$AMF_BRANCH"
+git -C "$srcdir" submodule update --init --recursive || true
 
-include_src=""
-for candidate in "$srcdir/amf/public/include" "$srcdir/public/include" "$srcdir/AMF/public/include"; do
+amf_dir=""
+for candidate in \
+    "$srcdir/amf/public/include/AMF" \
+    "$srcdir/public/include/AMF" \
+    "$srcdir/AMF/public/include/AMF" \
+    "$srcdir/include/AMF" \
+    "$srcdir/AMF"; do
     if [[ -d "$candidate" ]]; then
-        include_src="$candidate"
+        amf_dir="$candidate"
         break
     fi
 done
 
-if [[ -z "$include_src" ]]; then
+if [[ -z "$amf_dir" ]]; then
+    amf_dir="$(find "$srcdir" -type d -name AMF -path "*/public/include/AMF" -print -quit 2>/dev/null || true)"
+fi
+
+if [[ -z "$amf_dir" ]]; then
     echo "AMF headers not found in $srcdir." >&2
     exit 1
 fi
 
 mkdir -p "$PREFIX/include"
-cp -R "$include_src"/* "$PREFIX/include/"
+cp -R "$amf_dir" "$PREFIX/include/"
