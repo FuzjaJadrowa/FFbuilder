@@ -234,7 +234,6 @@ LIB_SCRIPTS=(
     "$LIBS_DIR/libfdk-aac.sh"
     "$LIBS_DIR/libwebp.sh"
     "$LIBS_DIR/libzimg.sh"
-    "$LIBS_DIR/libdavs2.sh"
     "$LIBS_DIR/libx264.sh"
     "$LIBS_DIR/libx265.sh"
     "$LIBS_DIR/libvpx.sh"
@@ -304,12 +303,6 @@ FFMPEG_FLAGS=(
     --extra-ldflags="$EXTRA_LDFLAGS"
     --disable-autodetect
 )
-
-if pc_has "davs2 >= 1.6.0"; then
-    FFMPEG_FLAGS+=(--enable-libdavs2)
-else
-    echo "Skipping libdavs2: missing or too old pkg-config file."
-fi
 
 if [[ -n "$EXTRA_LIBS" ]]; then
     FFMPEG_FLAGS+=(--extra-libs="$EXTRA_LIBS")
