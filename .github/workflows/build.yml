@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -87,3 +90,35 @@ jobs:
         with:
           name: ffmpeg-windows
           path: artifacts/ffmpeg-windows.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/ffmpeg')
+    needs:
+      - build-linux
+      - build-macos
+      - build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg-linux
+          path: release
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg-macos
+          path: release
+      - name: Download windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg-windows
+          path: release
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          files: |
+            release/ffmpeg-linux.tar.xz
+            release/ffmpeg-macos.tar.xz
+            release/ffmpeg-windows.zip

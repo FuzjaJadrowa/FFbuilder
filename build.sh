@@ -340,12 +340,12 @@ if [[ "$TARGET_INPUT" == "macos" ]]; then
 fi
 
 if [[ "$TARGET_INPUT" == "linux" ]]; then
-    if pc_has "libdrm"; then
+    if pc_exists "libdrm"; then
         FFMPEG_FLAGS+=(--enable-libdrm)
     else
         echo "Skipping libdrm: libdrm not found via pkg-config." >&2
     fi
-    if pc_has "libva"; then
+    if pc_exists "libva"; then
         FFMPEG_FLAGS+=(--enable-vaapi)
     else
         echo "Skipping VAAPI: libva not found via pkg-config." >&2
@@ -353,7 +353,7 @@ if [[ "$TARGET_INPUT" == "linux" ]]; then
 fi
 
 if [[ "$TARGET_INPUT" != "macos" ]]; then
-    if pc_has "ffnvcodec"; then
+    if pc_exists "ffnvcodec"; then
         FFMPEG_FLAGS+=(--enable-ffnvcodec --enable-nvenc --enable-nvdec --enable-cuvid)
     else
         echo "Skipping NVENC/NVDEC: nv-codec-headers not found via pkg-config." >&2
