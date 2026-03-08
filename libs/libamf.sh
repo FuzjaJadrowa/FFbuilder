@@ -17,27 +17,45 @@ ensure_clone "$srcdir" "$AMF_REPO"
 git_checkout "$srcdir" "$AMF_BRANCH"
 git -C "$srcdir" submodule update --init --recursive || true
 
-amf_dir=""
+amf_include=""
 for candidate in \
     "$srcdir/amf/public/include/AMF" \
+    "$srcdir/amf/public/include" \
     "$srcdir/public/include/AMF" \
+    "$srcdir/public/include" \
     "$srcdir/AMF/public/include/AMF" \
+    "$srcdir/AMF/public/include" \
     "$srcdir/include/AMF" \
+    "$srcdir/include" \
     "$srcdir/AMF"; do
     if [[ -d "$candidate" ]]; then
-        amf_dir="$candidate"
-        break
+        if [[ -f "$candidate/core/Version.h" ]]; then
+            amf_include="$candidate"
+            break
+        fi
+        if [[ -f "$candidate/AMF/core/Version.h" ]]; then
+            amf_include="$candidate/AMF"
+            break
+        fi
     fi
 done
 
-if [[ -z "$amf_dir" ]]; then
-    amf_dir="$(find "$srcdir" -type d -name AMF -path "*/public/include/AMF" -print -quit 2>/dev/null || true)"
+if [[ -z "$amf_include" ]]; then
+    version_path="$(find "$srcdir" -type f -path "*/core/Version.h" -print -quit 2>/dev/null || true)"
+    if [[ -n "$version_path" ]]; then
+        amf_include="$(dirname "$(dirname "$version_path")")"
+    fi
 fi
 
-if [[ -z "$amf_dir" ]]; then
+if [[ -z "$amf_include" ]]; then
     echo "AMF headers not found in $srcdir." >&2
     exit 1
 fi
 
 mkdir -p "$PREFIX/include"
-cp -R "$amf_dir" "$PREFIX/include/"
+if [[ "$(basename "$amf_include")" == "AMF" ]]; then
+    cp -R "$amf_include" "$PREFIX/include/"
+else
+    mkdir -p "$PREFIX/include/AMF"
+    cp -R "$amf_include/"* "$PREFIX/include/AMF/"
+fi
