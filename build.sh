@@ -280,6 +280,13 @@ for script in "${LIB_SCRIPTS[@]}"; do
     bash "$script"
 done
 
+if [[ "$TARGET_INPUT" == "windows" && "${MINGW_STATIC_RUNTIME:-1}" == "1" ]]; then
+    for pc in "$PREFIX/lib/pkgconfig/"*.pc "$PREFIX/share/pkgconfig/"*.pc; do
+        [[ -f "$pc" ]] || continue
+        sed -i 's/ -lgcc_s_seh//g; s/ -lgcc_s//g' "$pc"
+    done
+fi
+
 EXTRA_CFLAGS="-I$PREFIX/include"
 EXTRA_LDFLAGS="-L$PREFIX/lib"
 EXTRA_LIBS=""
