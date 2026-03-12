@@ -66,3 +66,48 @@ tool_path() {
         printf '%s' "$tool"
     fi
 }
+
+fetch_url() {
+    local url="$1"
+    local dest="$2"
+    if command -v curl >/dev/null 2>&1; then
+        curl -L -o "$dest" "$url"
+        return
+    fi
+    if command -v wget >/dev/null 2>&1; then
+        wget -O "$dest" "$url"
+        return
+    fi
+    echo "Missing curl/wget to download $url" >&2
+    exit 1
+}
+
+ensure_tarball() {
+    local url="$1"
+    local tarball="$2"
+    local out_dir="$3"
+    local strip="${4:-0}"
+    if [[ -d "$out_dir" ]]; then
+        return
+    fi
+    mkdir -p "$(dirname "$tarball")"
+    if [[ ! -f "$tarball" ]]; then
+        fetch_url "$url" "$tarball"
+    fi
+    mkdir -p "$out_dir"
+    if [[ "$strip" == "1" ]]; then
+        tar -xf "$tarball" -C "$out_dir" --strip-components=1
+    else
+        tar -xf "$tarball" -C "$(dirname "$out_dir")"
+    fi
+}
+
+autotools_prepare() {
+    if [[ -x "./autogen.sh" ]]; then
+        NOCONFIGURE=1 ./autogen.sh
+        return
+    fi
+    if [[ -f "configure.ac" || -f "configure.in" ]]; then
+        autoreconf -fiv
+    fi
+}

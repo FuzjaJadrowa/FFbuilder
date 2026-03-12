@@ -248,6 +248,10 @@ LIB_SCRIPTS=(
 
 ENABLE_VAAPI="${ENABLE_VAAPI:-0}"
 ENABLE_NVCODEC="${ENABLE_NVCODEC:-0}"
+ENABLE_EXTRAS="${ENABLE_EXTRAS:-0}"
+ENABLE_FONTS="${ENABLE_FONTS:-$ENABLE_EXTRAS}"
+ENABLE_DVD="${ENABLE_DVD:-$ENABLE_EXTRAS}"
+ENABLE_SYSTEM_EXTRAS="${ENABLE_SYSTEM_EXTRAS:-$ENABLE_EXTRAS}"
 
 if [[ "$TARGET_INPUT" == "linux" ]]; then
     if [[ "$ENABLE_VAAPI" == "1" ]]; then
@@ -270,6 +274,52 @@ fi
 
 if [[ "$TARGET_INPUT" == "windows" ]]; then
     LIB_SCRIPTS+=("$LIBS_DIR/libamf.sh")
+fi
+
+if [[ "$ENABLE_EXTRAS" == "1" ]]; then
+    LIB_SCRIPTS+=(
+        "$LIBS_DIR/libfftw3.sh"
+        "$LIBS_DIR/libgmp.sh"
+        "$LIBS_DIR/libopenssl.sh"
+        "$LIBS_DIR/libssh.sh"
+        "$LIBS_DIR/libsrt.sh"
+        "$LIBS_DIR/libsoxr.sh"
+        "$LIBS_DIR/libsnappy.sh"
+        "$LIBS_DIR/libvmaf.sh"
+        "$LIBS_DIR/libkvazaar.sh"
+        "$LIBS_DIR/libgme.sh"
+        "$LIBS_DIR/libvidstab.sh"
+        "$LIBS_DIR/libtwolame.sh"
+        "$LIBS_DIR/libxvid.sh"
+        "$LIBS_DIR/libzvbi.sh"
+        "$LIBS_DIR/libchromaprint.sh"
+        "$LIBS_DIR/libaribb24.sh"
+        "$LIBS_DIR/libaribcaption.sh"
+    )
+fi
+
+if [[ "$ENABLE_FONTS" == "1" ]]; then
+    LIB_SCRIPTS+=(
+        "$LIBS_DIR/libzlib.sh"
+        "$LIBS_DIR/libbz2.sh"
+        "$LIBS_DIR/libpng.sh"
+        "$LIBS_DIR/libexpat.sh"
+        "$LIBS_DIR/libfreetype.sh"
+        "$LIBS_DIR/libfontconfig.sh"
+        "$LIBS_DIR/libharfbuzz.sh"
+        "$LIBS_DIR/libfribidi.sh"
+        "$LIBS_DIR/libass.sh"
+    )
+fi
+
+if [[ "$ENABLE_DVD" == "1" ]]; then
+    LIB_SCRIPTS+=(
+        "$LIBS_DIR/libdvdcss.sh"
+        "$LIBS_DIR/libdvdread.sh"
+        "$LIBS_DIR/libdvdnav.sh"
+        "$LIBS_DIR/libudfread.sh"
+        "$LIBS_DIR/libbluray.sh"
+    )
 fi
 
 for script in "${LIB_SCRIPTS[@]}"; do
@@ -315,6 +365,16 @@ pc_has() {
     pc_exists "${expr%% *}"
 }
 
+pc_exists_any() {
+    local name
+    for name in "$@"; do
+        if pc_exists "$name"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 FFMPEG_FLAGS=(
     --prefix="$PREFIX"
     --pkg-config-flags=--static
@@ -353,28 +413,47 @@ fi
 git -C "$ffdir" fetch --depth 1 origin "$FFMPEG_BRANCH" || true
 git -C "$ffdir" checkout "$FFMPEG_BRANCH"
 
+ffmpeg_help="$BUILD/ffmpeg_configure_help.txt"
+if [[ ! -f "$ffmpeg_help" || "${FFMPEG_CONFIGURE_REFRESH:-0}" == "1" ]]; then
+    "$ffdir/configure" --help > "$ffmpeg_help"
+fi
+
+ffmpeg_has_flag() {
+    local flag="$1"
+    grep -q -- "$flag" "$ffmpeg_help"
+}
+
+add_ffmpeg_flag() {
+    local flag="$1"
+    if ffmpeg_has_flag "$flag"; then
+        FFMPEG_FLAGS+=("$flag")
+    else
+        echo "Skipping unsupported FFmpeg flag: $flag" >&2
+    fi
+}
+
 if [[ "$TARGET_INPUT" == "windows" ]]; then
     FFMPEG_FLAGS+=(--enable-dxva2 --enable-d3d11va)
     if [[ -d "$PREFIX/include/AMF" ]]; then
-        FFMPEG_FLAGS+=(--enable-amf)
+        add_ffmpeg_flag --enable-amf
     else
         echo "Skipping AMF: headers not installed in $PREFIX/include/AMF." >&2
     fi
 fi
 
 if [[ "$TARGET_INPUT" == "macos" ]]; then
-    FFMPEG_FLAGS+=(--enable-videotoolbox)
+    add_ffmpeg_flag --enable-videotoolbox
 fi
 
 if [[ "$TARGET_INPUT" == "linux" ]]; then
     if [[ "$ENABLE_VAAPI" == "1" ]]; then
         if pc_exists "libdrm"; then
-            FFMPEG_FLAGS+=(--enable-libdrm)
+            add_ffmpeg_flag --enable-libdrm
         else
             echo "Skipping libdrm: libdrm not found via pkg-config." >&2
         fi
         if pc_exists "libva"; then
-            FFMPEG_FLAGS+=(--enable-vaapi)
+            add_ffmpeg_flag --enable-vaapi
         else
             echo "Skipping VAAPI: libva not found via pkg-config." >&2
         fi
@@ -384,10 +463,240 @@ fi
 if [[ "$TARGET_INPUT" != "macos" ]]; then
     if [[ "$TARGET_INPUT" == "windows" || "$ENABLE_NVCODEC" == "1" ]]; then
         if pc_exists "ffnvcodec"; then
-            FFMPEG_FLAGS+=(--enable-ffnvcodec --enable-nvenc --enable-nvdec --enable-cuvid)
+            add_ffmpeg_flag --enable-ffnvcodec
+            add_ffmpeg_flag --enable-nvenc
+            add_ffmpeg_flag --enable-nvdec
+            add_ffmpeg_flag --enable-cuvid
         else
             echo "Skipping NVENC/NVDEC: nv-codec-headers not found via pkg-config." >&2
         fi
+    fi
+fi
+
+if [[ "$ENABLE_EXTRAS" == "1" ]]; then
+    if pc_exists "fftw3"; then
+        add_ffmpeg_flag --enable-fftw3
+    else
+        echo "Skipping FFTW3: fftw3 not found via pkg-config." >&2
+    fi
+    if pc_exists "gmp"; then
+        add_ffmpeg_flag --enable-gmp
+    else
+        echo "Skipping GMP: gmp not found via pkg-config." >&2
+    fi
+    if pc_exists "openssl"; then
+        add_ffmpeg_flag --enable-openssl
+    else
+        echo "Skipping OpenSSL: openssl not found via pkg-config." >&2
+    fi
+    if pc_exists "libssh"; then
+        add_ffmpeg_flag --enable-libssh
+    else
+        echo "Skipping libssh: libssh not found via pkg-config." >&2
+    fi
+    if pc_exists "srt"; then
+        add_ffmpeg_flag --enable-libsrt
+    else
+        echo "Skipping SRT: srt not found via pkg-config." >&2
+    fi
+    if pc_exists "soxr"; then
+        add_ffmpeg_flag --enable-libsoxr
+    else
+        echo "Skipping soxr: soxr not found via pkg-config." >&2
+    fi
+    if pc_exists "snappy"; then
+        add_ffmpeg_flag --enable-libsnappy
+    else
+        echo "Skipping snappy: snappy not found via pkg-config." >&2
+    fi
+    if pc_exists "libvmaf"; then
+        add_ffmpeg_flag --enable-libvmaf
+    else
+        echo "Skipping libvmaf: libvmaf not found via pkg-config." >&2
+    fi
+    if pc_exists "kvazaar"; then
+        add_ffmpeg_flag --enable-libkvazaar
+    else
+        echo "Skipping kvazaar: kvazaar not found via pkg-config." >&2
+    fi
+    if pc_exists "gme"; then
+        add_ffmpeg_flag --enable-libgme
+    else
+        echo "Skipping libgme: gme not found via pkg-config." >&2
+    fi
+    if pc_exists_any "vidstab" "libvidstab"; then
+        add_ffmpeg_flag --enable-libvidstab
+    else
+        echo "Skipping libvidstab: vidstab not found via pkg-config." >&2
+    fi
+    if pc_exists_any "twolame" "libtwolame"; then
+        add_ffmpeg_flag --enable-libtwolame
+    else
+        echo "Skipping twolame: twolame not found via pkg-config." >&2
+    fi
+    if pc_exists_any "xvidcore" "xvid"; then
+        add_ffmpeg_flag --enable-libxvid
+    else
+        echo "Skipping xvid: xvidcore not found via pkg-config." >&2
+    fi
+    if pc_exists_any "zvbi-0.2" "libzvbi"; then
+        add_ffmpeg_flag --enable-libzvbi
+    else
+        echo "Skipping libzvbi: zvbi not found via pkg-config." >&2
+    fi
+    if pc_exists_any "libchromaprint" "chromaprint"; then
+        add_ffmpeg_flag --enable-libchromaprint
+    else
+        echo "Skipping chromaprint: libchromaprint not found via pkg-config." >&2
+    fi
+    if pc_exists "libaribb24"; then
+        add_ffmpeg_flag --enable-libaribb24
+    else
+        echo "Skipping libaribb24: libaribb24 not found via pkg-config." >&2
+    fi
+    if pc_exists "libaribcaption"; then
+        add_ffmpeg_flag --enable-libaribcaption
+    else
+        echo "Skipping libaribcaption: libaribcaption not found via pkg-config." >&2
+    fi
+    if pc_exists "libzmq"; then
+        add_ffmpeg_flag --enable-libzmq
+    else
+        echo "Skipping libzmq: libzmq not found via pkg-config." >&2
+    fi
+    if pc_exists "libplacebo"; then
+        add_ffmpeg_flag --enable-libplacebo
+    else
+        echo "Skipping libplacebo: libplacebo not found via pkg-config." >&2
+    fi
+    if pc_exists "libvpl"; then
+        add_ffmpeg_flag --enable-libvpl
+    else
+        echo "Skipping libvpl: libvpl not found via pkg-config." >&2
+    fi
+    if pc_exists "rav1e"; then
+        add_ffmpeg_flag --enable-librav1e
+    else
+        echo "Skipping rav1e: rav1e not found via pkg-config." >&2
+    fi
+    if pc_exists "vvenc"; then
+        add_ffmpeg_flag --enable-libvvenc
+    else
+        echo "Skipping vvenc: vvenc not found via pkg-config." >&2
+    fi
+    if pc_exists "uavs3d"; then
+        add_ffmpeg_flag --enable-libuavs3d
+    else
+        echo "Skipping uavs3d: uavs3d not found via pkg-config." >&2
+    fi
+    if pc_exists "xavs2"; then
+        add_ffmpeg_flag --enable-libxavs2
+    else
+        echo "Skipping xavs2: xavs2 not found via pkg-config." >&2
+    fi
+    if pc_exists "davs2"; then
+        add_ffmpeg_flag --enable-libdavs2
+    else
+        echo "Skipping davs2: davs2 not found via pkg-config." >&2
+    fi
+    if pc_exists "frei0r"; then
+        add_ffmpeg_flag --enable-frei0r
+    else
+        echo "Skipping frei0r: frei0r not found via pkg-config." >&2
+    fi
+    if pc_exists "rubberband"; then
+        add_ffmpeg_flag --enable-librubberband
+    else
+        echo "Skipping rubberband: rubberband not found via pkg-config." >&2
+    fi
+    if [[ "$TARGET_INPUT" == "windows" ]]; then
+        if [[ -f "$PREFIX/include/avisynth/avisynth_c.h" || -f "$PREFIX/include/avisynth_c.h" ]]; then
+            add_ffmpeg_flag --enable-avisynth
+        else
+            echo "Skipping AviSynth: headers not found in $PREFIX/include." >&2
+        fi
+    fi
+fi
+
+if [[ "$ENABLE_FONTS" == "1" ]]; then
+    if [[ -f "$PREFIX/lib/libz.a" ]] || pc_exists "zlib"; then
+        add_ffmpeg_flag --enable-zlib
+    else
+        echo "Skipping zlib: libz not found in prefix or via pkg-config." >&2
+    fi
+    if pc_exists "freetype2"; then
+        add_ffmpeg_flag --enable-libfreetype
+    else
+        echo "Skipping freetype: freetype2 not found via pkg-config." >&2
+    fi
+    if pc_exists "fontconfig"; then
+        add_ffmpeg_flag --enable-libfontconfig
+    else
+        echo "Skipping fontconfig: fontconfig not found via pkg-config." >&2
+    fi
+    if pc_exists "harfbuzz"; then
+        add_ffmpeg_flag --enable-libharfbuzz
+    else
+        echo "Skipping harfbuzz: harfbuzz not found via pkg-config." >&2
+    fi
+    if pc_exists "fribidi"; then
+        add_ffmpeg_flag --enable-libfribidi
+    else
+        echo "Skipping fribidi: fribidi not found via pkg-config." >&2
+    fi
+    if pc_exists "libass"; then
+        add_ffmpeg_flag --enable-libass
+    else
+        echo "Skipping libass: libass not found via pkg-config." >&2
+    fi
+fi
+
+if [[ "$ENABLE_DVD" == "1" ]]; then
+    if pc_exists_any "dvdread" "libdvdread"; then
+        add_ffmpeg_flag --enable-libdvdread
+    else
+        echo "Skipping libdvdread: dvdread not found via pkg-config." >&2
+    fi
+    if pc_exists_any "dvdnav" "libdvdnav"; then
+        add_ffmpeg_flag --enable-libdvdnav
+    else
+        echo "Skipping libdvdnav: dvdnav not found via pkg-config." >&2
+    fi
+    if pc_exists "libbluray"; then
+        add_ffmpeg_flag --enable-libbluray
+    else
+        echo "Skipping libbluray: libbluray not found via pkg-config." >&2
+    fi
+fi
+
+if [[ "$ENABLE_SYSTEM_EXTRAS" == "1" ]]; then
+    if pc_exists "x11"; then
+        add_ffmpeg_flag --enable-xlib
+    else
+        echo "Skipping X11: x11 not found via pkg-config." >&2
+    fi
+    if pc_exists_any "OpenCL" "opencl"; then
+        add_ffmpeg_flag --enable-opencl
+    else
+        echo "Skipping OpenCL: OpenCL not found via pkg-config." >&2
+    fi
+    if pc_exists "vulkan"; then
+        add_ffmpeg_flag --enable-vulkan
+    else
+        echo "Skipping Vulkan: vulkan not found via pkg-config." >&2
+    fi
+    if pc_exists "libpulse"; then
+        add_ffmpeg_flag --enable-libpulse
+    else
+        echo "Skipping PulseAudio: libpulse not found via pkg-config." >&2
+    fi
+    if pc_exists "sdl2"; then
+        add_ffmpeg_flag --enable-sdl2
+    else
+        echo "Skipping SDL2: sdl2 not found via pkg-config." >&2
+    fi
+    if [[ "$TARGET_INPUT" == "windows" ]]; then
+        add_ffmpeg_flag --enable-schannel
     fi
 fi
 
