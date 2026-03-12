@@ -248,10 +248,7 @@ LIB_SCRIPTS=(
 
 ENABLE_VAAPI="${ENABLE_VAAPI:-0}"
 ENABLE_NVCODEC="${ENABLE_NVCODEC:-0}"
-ENABLE_EXTRAS="${ENABLE_EXTRAS:-1}"
-ENABLE_FONTS="${ENABLE_FONTS:-1}"
-ENABLE_DVD="${ENABLE_DVD:-1}"
-ENABLE_SYSTEM_EXTRAS="${ENABLE_SYSTEM_EXTRAS:-1}"
+ENABLE_EXTRA_LIBS="${ENABLE_EXTRA_LIBS:-${ENABLE_EXTRAS:-1}}"
 
 if [[ "$TARGET_INPUT" == "linux" ]]; then
     if [[ "$ENABLE_VAAPI" == "1" ]]; then
@@ -276,8 +273,22 @@ if [[ "$TARGET_INPUT" == "windows" ]]; then
     LIB_SCRIPTS+=("$LIBS_DIR/libamf.sh")
 fi
 
-if [[ "$ENABLE_EXTRAS" == "1" ]]; then
+if [[ "$ENABLE_EXTRA_LIBS" == "1" ]]; then
     LIB_SCRIPTS+=(
+        "$LIBS_DIR/libzlib.sh"
+        "$LIBS_DIR/libbz2.sh"
+        "$LIBS_DIR/libpng.sh"
+        "$LIBS_DIR/libexpat.sh"
+        "$LIBS_DIR/libfreetype.sh"
+        "$LIBS_DIR/libfontconfig.sh"
+        "$LIBS_DIR/libharfbuzz.sh"
+        "$LIBS_DIR/libfribidi.sh"
+        "$LIBS_DIR/libass.sh"
+        "$LIBS_DIR/libdvdcss.sh"
+        "$LIBS_DIR/libdvdread.sh"
+        "$LIBS_DIR/libdvdnav.sh"
+        "$LIBS_DIR/libudfread.sh"
+        "$LIBS_DIR/libbluray.sh"
         "$LIBS_DIR/libfftw3.sh"
         "$LIBS_DIR/libgmp.sh"
         "$LIBS_DIR/libopenssl.sh"
@@ -295,30 +306,16 @@ if [[ "$ENABLE_EXTRAS" == "1" ]]; then
         "$LIBS_DIR/libchromaprint.sh"
         "$LIBS_DIR/libaribb24.sh"
         "$LIBS_DIR/libaribcaption.sh"
-    )
-fi
-
-if [[ "$ENABLE_FONTS" == "1" ]]; then
-    LIB_SCRIPTS+=(
-        "$LIBS_DIR/libzlib.sh"
-        "$LIBS_DIR/libbz2.sh"
-        "$LIBS_DIR/libpng.sh"
-        "$LIBS_DIR/libexpat.sh"
-        "$LIBS_DIR/libfreetype.sh"
-        "$LIBS_DIR/libfontconfig.sh"
-        "$LIBS_DIR/libharfbuzz.sh"
-        "$LIBS_DIR/libfribidi.sh"
-        "$LIBS_DIR/libass.sh"
-    )
-fi
-
-if [[ "$ENABLE_DVD" == "1" ]]; then
-    LIB_SCRIPTS+=(
-        "$LIBS_DIR/libdvdcss.sh"
-        "$LIBS_DIR/libdvdread.sh"
-        "$LIBS_DIR/libdvdnav.sh"
-        "$LIBS_DIR/libudfread.sh"
-        "$LIBS_DIR/libbluray.sh"
+        "$LIBS_DIR/libzmq.sh"
+        "$LIBS_DIR/libplacebo.sh"
+        "$LIBS_DIR/libvpl.sh"
+        "$LIBS_DIR/librav1e.sh"
+        "$LIBS_DIR/libvvenc.sh"
+        "$LIBS_DIR/libuavs3d.sh"
+        "$LIBS_DIR/libdavs2.sh"
+        "$LIBS_DIR/libxavs2.sh"
+        "$LIBS_DIR/libfrei0r.sh"
+        "$LIBS_DIR/librubberband.sh"
     )
 fi
 
@@ -473,7 +470,7 @@ if [[ "$TARGET_INPUT" != "macos" ]]; then
     fi
 fi
 
-if [[ "$ENABLE_EXTRAS" == "1" ]]; then
+if [[ "$ENABLE_EXTRA_LIBS" == "1" ]]; then
     if pc_exists "fftw3"; then
         add_ffmpeg_flag --enable-fftw3
     else
@@ -616,9 +613,7 @@ if [[ "$ENABLE_EXTRAS" == "1" ]]; then
             echo "Skipping AviSynth: headers not found in $PREFIX/include." >&2
         fi
     fi
-fi
 
-if [[ "$ENABLE_FONTS" == "1" ]]; then
     if [[ -f "$PREFIX/lib/libz.a" ]] || pc_exists "zlib"; then
         add_ffmpeg_flag --enable-zlib
     else
@@ -649,9 +644,7 @@ if [[ "$ENABLE_FONTS" == "1" ]]; then
     else
         echo "Skipping libass: libass not found via pkg-config." >&2
     fi
-fi
 
-if [[ "$ENABLE_DVD" == "1" ]]; then
     if pc_exists_any "dvdread" "libdvdread"; then
         add_ffmpeg_flag --enable-libdvdread
     else
@@ -667,9 +660,7 @@ if [[ "$ENABLE_DVD" == "1" ]]; then
     else
         echo "Skipping libbluray: libbluray not found via pkg-config." >&2
     fi
-fi
 
-if [[ "$ENABLE_SYSTEM_EXTRAS" == "1" ]]; then
     if pc_exists "x11"; then
         add_ffmpeg_flag --enable-xlib
     else

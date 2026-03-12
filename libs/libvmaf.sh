@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -7,10 +7,11 @@ source "$SCRIPT_DIR/common.sh"
 LIBVMAF_VERSION="${LIBVMAF_VERSION:-3.0.0}"
 LIBVMAF_URL="${LIBVMAF_URL:-https://github.com/Netflix/vmaf/archive/refs/tags/v${LIBVMAF_VERSION}.tar.gz}"
 
-srcdir="$SRC/vmaf-$LIBVMAF_VERSION"
+srcroot="$SRC/vmaf-$LIBVMAF_VERSION"
 tarball="$SRC/vmaf-$LIBVMAF_VERSION.tar.gz"
-ensure_tarball "$LIBVMAF_URL" "$tarball" "$srcdir" 1
+ensure_tarball "$LIBVMAF_URL" "$tarball" "$srcroot" 1
 
+srcdir="$srcroot/libvmaf"
 builddir="$BUILD/vmaf"
 rm -rf "$builddir"
 mkdir -p "$builddir"
