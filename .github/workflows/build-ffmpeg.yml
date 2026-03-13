@@ -1,0 +1,145 @@
+name: Build FFmpeg
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  build_windows:
+    name: Build Windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build (win64)
+        env:
+          TARGETS: win64
+        run: |
+          bash winlinux/build.sh
+
+      - name: Package minimal Windows artifact
+        run: |
+          set -euo pipefail
+          workdir="$(mktemp -d)"
+          unzip -q winlinux/artifacts/*.zip -d "$workdir"
+          ffmpeg_path="$(find "$workdir" -type f -path '*/bin/ffmpeg.exe' -print -quit)"
+          ffprobe_path="$(find "$workdir" -type f -path '*/bin/ffprobe.exe' -print -quit)"
+          if [[ -z "$ffmpeg_path" || -z "$ffprobe_path" ]]; then
+            echo "ffmpeg.exe or ffprobe.exe not found"
+            exit 1
+          fi
+          dist="$PWD/dist-windows"
+          rm -rf "$dist"
+          mkdir -p "$dist"
+          cp "$ffmpeg_path" "$dist/ffmpeg.exe"
+          cp "$ffprobe_path" "$dist/ffprobe.exe"
+          rm -f ffmpeg-windows.zip
+          (cd "$dist" && zip -9 -q "$PWD/ffmpeg-windows.zip" ffmpeg.exe ffprobe.exe)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-windows.zip
+          path: ffmpeg-windows.zip
+          if-no-files-found: error
+
+  build_linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build (linux64)
+        env:
+          TARGETS: linux64
+        run: |
+          bash winlinux/build.sh
+
+      - name: Package minimal Linux artifact
+        run: |
+          set -euo pipefail
+          workdir="$(mktemp -d)"
+          tar -xf winlinux/artifacts/*.tar.xz -C "$workdir"
+          ffmpeg_path="$(find "$workdir" -type f -path '*/bin/ffmpeg' -print -quit)"
+          ffprobe_path="$(find "$workdir" -type f -path '*/bin/ffprobe' -print -quit)"
+          if [[ -z "$ffmpeg_path" || -z "$ffprobe_path" ]]; then
+            echo "ffmpeg or ffprobe not found"
+            exit 1
+          fi
+          dist="$PWD/dist-linux"
+          rm -rf "$dist"
+          mkdir -p "$dist"
+          cp "$ffmpeg_path" "$dist/ffmpeg"
+          cp "$ffprobe_path" "$dist/ffprobe"
+          rm -f ffmpeg-linux.tar.xz
+          tar -cJf ffmpeg-linux.tar.xz -C "$dist" ffmpeg ffprobe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-linux.tar.xz
+          path: ffmpeg-linux.tar.xz
+          if-no-files-found: error
+
+  build_macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build (Apple Silicon)
+        run: |
+          bash macos/build.sh
+
+      - name: Package minimal macOS artifact
+        run: |
+          set -euo pipefail
+          ffmpeg_path="macos/artifacts/out/bin/ffmpeg"
+          ffprobe_path="macos/artifacts/out/bin/ffprobe"
+          if [[ ! -f "$ffmpeg_path" || ! -f "$ffprobe_path" ]]; then
+            echo "ffmpeg or ffprobe not found"
+            exit 1
+          fi
+          dist="$PWD/dist-macos"
+          rm -rf "$dist"
+          mkdir -p "$dist"
+          cp "$ffmpeg_path" "$dist/ffmpeg"
+          cp "$ffprobe_path" "$dist/ffprobe"
+          rm -f ffmpeg-macos.tar.xz
+          tar -cJf ffmpeg-macos.tar.xz -C "$dist" ffmpeg ffprobe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-macos.tar.xz
+          path: ffmpeg-macos.tar.xz
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    if: startsWith(github.ref, 'refs/tags/ffmpeg')
+    needs:
+      - build_windows
+      - build_linux
+      - build_macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ffmpeg-*
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release create "$tag" --title "$tag" --notes "" \
+            ffmpeg-windows.zip ffmpeg-macos.tar.xz ffmpeg-linux.tar.xz
