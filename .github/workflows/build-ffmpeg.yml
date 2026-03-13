@@ -36,8 +36,9 @@ jobs:
           mkdir -p "$dist"
           cp "$ffmpeg_path" "$dist/ffmpeg.exe"
           cp "$ffprobe_path" "$dist/ffprobe.exe"
-          rm -f ffmpeg-windows.zip
-          (cd "$dist" && zip -9 -q "$PWD/ffmpeg-windows.zip" ffmpeg.exe ffprobe.exe)
+          out="$PWD/ffmpeg-windows.zip"
+          rm -f "$out"
+          (cd "$dist" && zip -9 -q "$out" ffmpeg.exe ffprobe.exe)
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
