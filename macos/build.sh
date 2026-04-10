@@ -32,6 +32,29 @@ mkdir -p "$WORK_DIR" "$BUILD_DIR"
 
 git clone --depth=1 --branch "$REPO_BRANCH" "$REPO_URL" "$CLONE_DIR"
 
+patch_libbluray_libxml_path() {
+    local libbluray_script="$CLONE_DIR/build/build-libbluray.sh"
+    local patched_script="$CLONE_DIR/build/build-libbluray.sh.patched"
+
+    awk '
+      /LIBXML2_CFLAGS=.*\.\.\/\$\{SOFTWARE\}\/configure --prefix="\$3" --enable-shared=no --disable-bdjava-jar/ {
+        print "  SDK_PATH=\"$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)\""
+        print "  if [[ -n \"$SDK_PATH\" && -d \"$SDK_PATH/usr/include/libxml2\" ]]; then"
+        print "    LIBXML2_CFLAGS=\"-I$SDK_PATH/usr/include/libxml2\" LIBXML2_LIBS=\"-lxml2\" ../${SOFTWARE}/configure --prefix=\"$3\" --enable-shared=no --disable-bdjava-jar"
+        print "  else"
+        print "    LIBXML2_CFLAGS=\"-I/usr/include/libxml2\" LIBXML2_LIBS=\"-lxml2\" ../${SOFTWARE}/configure --prefix=\"$3\" --enable-shared=no --disable-bdjava-jar"
+        print "  fi"
+        next
+      }
+      { print }
+    ' "$libbluray_script" > "$patched_script"
+
+    mv "$patched_script" "$libbluray_script"
+    chmod +x "$libbluray_script"
+}
+
+patch_libbluray_libxml_path
+
 if [[ "$PATCH_SKIP_FONTCONFIG" == "1" ]]; then
     # libass in this toolchain is configured with --disable-fontconfig and ffmpeg is
     # not built with --enable-libfontconfig, so fontconfig is not required.
