@@ -20,7 +20,7 @@ jobs:
         run: |
           bash winlinux/build.sh
 
-      - name: Prepare Windows binary artifact
+      - name: Prepare Windows archive
         run: |
           set -euo pipefail
           workdir="$(mktemp -d)"
@@ -33,13 +33,18 @@ jobs:
           dist="$PWD/dist-windows"
           rm -rf "$dist"
           mkdir -p "$dist"
-          cp "$ffmpeg_path" "$dist/ffmpeg-windows.exe"
+          cp "$ffmpeg_path" "$dist/ffmpeg.exe"
+          (
+            cd "$dist"
+            rm -f "$PWD/ffmpeg-windows.zip"
+            zip -9 -q "$PWD/ffmpeg-windows.zip" ffmpeg.exe
+          )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ffmpeg-windows.exe
-          path: dist-windows/ffmpeg-windows.exe
+          name: ffmpeg-windows.zip
+          path: dist-windows/ffmpeg-windows.zip
           if-no-files-found: error
 
   build_linux:
@@ -55,7 +60,7 @@ jobs:
         run: |
           bash winlinux/build.sh
 
-      - name: Prepare Linux binary artifact
+      - name: Prepare Linux archive
         run: |
           set -euo pipefail
           workdir="$(mktemp -d)"
@@ -68,14 +73,15 @@ jobs:
           dist="$PWD/dist-linux"
           rm -rf "$dist"
           mkdir -p "$dist"
-          cp "$ffmpeg_path" "$dist/ffmpeg-linux"
-          chmod +x "$dist/ffmpeg-linux"
+          cp "$ffmpeg_path" "$dist/ffmpeg"
+          chmod +x "$dist/ffmpeg"
+          tar -C "$dist" -cJf "$dist/ffmpeg-linux.tar.xz" ffmpeg
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ffmpeg-linux
-          path: dist-linux/ffmpeg-linux
+          name: ffmpeg-linux.tar.xz
+          path: dist-linux/ffmpeg-linux.tar.xz
           if-no-files-found: error
 
   build_macos:
@@ -89,7 +95,7 @@ jobs:
         run: |
           bash macos/build.sh
 
-      - name: Prepare macOS binary artifact
+      - name: Prepare macOS archive
         run: |
           set -euo pipefail
           ffmpeg_path="macos/artifacts/out/bin/ffmpeg"
@@ -100,14 +106,15 @@ jobs:
           dist="$PWD/dist-macos"
           rm -rf "$dist"
           mkdir -p "$dist"
-          cp "$ffmpeg_path" "$dist/ffmpeg-macos"
-          chmod +x "$dist/ffmpeg-macos"
+          cp "$ffmpeg_path" "$dist/ffmpeg"
+          chmod +x "$dist/ffmpeg"
+          tar -C "$dist" -cJf "$dist/ffmpeg-macos.tar.xz" ffmpeg
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ffmpeg-macos
-          path: dist-macos/ffmpeg-macos
+          name: ffmpeg-macos.tar.xz
+          path: dist-macos/ffmpeg-macos.tar.xz
           if-no-files-found: error
 
   release:
@@ -132,4 +139,4 @@ jobs:
           set -euo pipefail
           tag="${GITHUB_REF#refs/tags/}"
           gh release create "$tag" --title "$tag" --notes "" \
-            ffmpeg-windows.exe ffmpeg-macos ffmpeg-linux
+            ffmpeg-windows.zip ffmpeg-macos.tar.xz ffmpeg-linux.tar.xz
