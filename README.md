@@ -8,12 +8,12 @@
 
 ---
 
-FFbuilder is a repository for automated FFmpeg builds and publishing for Windows, macOS (Apple Silicon), and Linux. Builds use trusted upstreams, and the outputs are minimal packages that contain only `ffmpeg`.
+FFbuilder is a repository for automated FFmpeg package distribution for Windows, macOS (Apple Silicon), and Linux. Downloads use trusted upstreams, and the outputs are minimal packages that contain only `ffmpeg` with original binary signatures intact.
 
-**What it builds**
-- Windows (win64, GPL, release 8.0) via `BtbN/FFmpeg-Builds`
-- Linux (linux64, GPL, release 8.0) via `BtbN/FFmpeg-Builds`
-- macOS (Apple Silicon) via `Vargol/ffmpeg-apple-arm64-build`
+**What it packages**
+- Windows (win64, GPL, release 8.1) via `BtbN/FFmpeg-Builds`
+- Linux (linux64, GPL, release 8.1) via `BtbN/FFmpeg-Builds`
+- macOS (Apple Silicon, arm64) via trusted pre-built static packages
 
 **Final artifacts**
 - `ffmpeg-windows.zip` (only `ffmpeg.exe`)
@@ -23,6 +23,6 @@ FFbuilder is a repository for automated FFmpeg builds and publishing for Windows
 **Release**
 If a push is a tag starting with `ffmpeg`, the workflow creates a release named after the tag and attaches the three artifacts above.
 
-**Local**
-- Windows + Linux (via Docker): `bash winlinux/build.sh`
+**Local / Runner**
+- Windows + Linux: `bash winlinux/build.sh`
 - macOS (Apple Silicon): `bash macos/build.sh`

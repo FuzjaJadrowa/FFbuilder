@@ -4,43 +4,37 @@ IFS=$'\n\t'
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-REPO_URL="${REPO_URL:-https://github.com/Vargol/ffmpeg-apple-arm64-build.git}"
-REPO_BRANCH="${REPO_BRANCH:-master}"
-
-WORK_DIR="${WORK_DIR:-$ROOT_DIR/.vargol-work}"
-CLONE_DIR="${CLONE_DIR:-$WORK_DIR/ffmpeg-apple-arm64-build}"
-BUILD_DIR="${BUILD_DIR:-$WORK_DIR/work}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/artifacts}"
-KEEP_WORKDIR="${KEEP_WORKDIR:-0}"
+WORK_DIR="$(mktemp -d)"
+
+cleanup() {
+    rm -rf "$WORK_DIR"
+}
+trap cleanup EXIT
 
 require_cmd() {
     command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }
 }
 
-cleanup() {
-    if [[ "$KEEP_WORKDIR" != "1" ]]; then
-        rm -rf "$WORK_DIR"
-    fi
-}
-trap cleanup EXIT
+require_cmd curl
+require_cmd unzip
 
-require_cmd git
+MACOS_URL="${MACOS_URL:-https://github.com/Tyrrrz/FFmpegBin/releases/download/8.1/ffmpeg-osx-arm64.zip}"
 
-rm -rf "$WORK_DIR"
-mkdir -p "$WORK_DIR" "$BUILD_DIR"
+echo "Downloading macOS ARM64 FFmpeg package from: $MACOS_URL"
+curl -L -sS -f -o "$WORK_DIR/ffmpeg-macos.zip" "$MACOS_URL"
 
-git clone --depth=1 --branch "$REPO_BRANCH" "$REPO_URL" "$CLONE_DIR"
+unzip -q "$WORK_DIR/ffmpeg-macos.zip" -d "$WORK_DIR/extracted"
 
-(
-    cd "$BUILD_DIR"
-    "$CLONE_DIR/build.sh"
-)
+ffmpeg_bin="$(find "$WORK_DIR/extracted" -type f -name 'ffmpeg' -print -quit)"
 
-mkdir -p "$OUTPUT_DIR"
-
-if [[ -d "$BUILD_DIR/out" ]]; then
-    rm -rf "$OUTPUT_DIR/out"
-    cp -R "$BUILD_DIR/out" "$OUTPUT_DIR/out"
+if [[ -z "$ffmpeg_bin" ]]; then
+    echo "ffmpeg binary not found in downloaded archive" >&2
+    exit 1
 fi
+
+mkdir -p "$OUTPUT_DIR/out/bin"
+cp "$ffmpeg_bin" "$OUTPUT_DIR/out/bin/ffmpeg"
+chmod +x "$OUTPUT_DIR/out/bin/ffmpeg"
 
 echo "Artifacts written to: $OUTPUT_DIR"
