@@ -19,9 +19,9 @@ require_cmd() {
 require_cmd curl
 require_cmd unzip
 
-MACOS_URL="${MACOS_URL:-https://github.com/Tyrrrz/FFmpegBin/releases/download/8.1/ffmpeg-osx-arm64.zip}"
+MACOS_URL="${MACOS_URL:-https://github.com/Tyrrrz/FFmpegBin/releases/download/9.0.1/ffmpeg-osx-arm64.zip}"
 
-echo "Downloading macOS ARM64 FFmpeg package from: $MACOS_URL"
+echo "Downloading macOS ARM64 FFmpeg 9.0.1 package from: $MACOS_URL"
 curl -L -sS -f -o "$WORK_DIR/ffmpeg-macos.zip" "$MACOS_URL"
 
 unzip -q "$WORK_DIR/ffmpeg-macos.zip" -d "$WORK_DIR/extracted"

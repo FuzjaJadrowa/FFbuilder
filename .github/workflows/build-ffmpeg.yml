@@ -24,8 +24,13 @@ jobs:
         run: |
           set -euo pipefail
           workdir="$(mktemp -d)"
-          unzip -q winlinux/artifacts/*.zip -d "$workdir"
-          ffmpeg_path="$(find "$workdir" -type f -path '*/bin/ffmpeg.exe' -print -quit)"
+          archive="$(find winlinux/artifacts -type f \( -name '*.zip' -o -name '*.tar.xz' \) -print -quit)"
+          if [[ "$archive" == *.zip ]]; then
+            unzip -q "$archive" -d "$workdir"
+          else
+            tar -xf "$archive" -C "$workdir"
+          fi
+          ffmpeg_path="$(find "$workdir" -type f \( -path '*/bin/ffmpeg.exe' -o -name 'ffmpeg.exe' \) -print -quit)"
           if [[ -z "$ffmpeg_path" ]]; then
             echo "ffmpeg.exe not found"
             exit 1
@@ -64,8 +69,13 @@ jobs:
         run: |
           set -euo pipefail
           workdir="$(mktemp -d)"
-          tar -xf winlinux/artifacts/*.tar.xz -C "$workdir"
-          ffmpeg_path="$(find "$workdir" -type f -path '*/bin/ffmpeg' -print -quit)"
+          archive="$(find winlinux/artifacts -type f \( -name '*.tar.xz' -o -name '*.zip' \) -print -quit)"
+          if [[ "$archive" == *.zip ]]; then
+            unzip -q "$archive" -d "$workdir"
+          else
+            tar -xf "$archive" -C "$workdir"
+          fi
+          ffmpeg_path="$(find "$workdir" -type f \( -path '*/bin/ffmpeg' -o -name 'ffmpeg' \) -print -quit)"
           if [[ -z "$ffmpeg_path" ]]; then
             echo "ffmpeg not found"
             exit 1
@@ -98,8 +108,8 @@ jobs:
       - name: Prepare macOS archive
         run: |
           set -euo pipefail
-          ffmpeg_path="macos/artifacts/out/bin/ffmpeg"
-          if [[ ! -f "$ffmpeg_path" ]]; then
+          ffmpeg_path="$(find macos/artifacts -type f -name 'ffmpeg' -print -quit)"
+          if [[ -z "$ffmpeg_path" ]]; then
             echo "ffmpeg not found"
             exit 1
           fi

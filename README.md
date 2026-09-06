@@ -11,9 +11,9 @@
 FFbuilder is a repository for automated FFmpeg package distribution for Windows, macOS (Apple Silicon), and Linux. Downloads use trusted upstreams, and the outputs are minimal packages that contain only `ffmpeg` with original binary signatures intact.
 
 **What it packages**
-- Windows (win64, GPL, release 8.1) via `BtbN/FFmpeg-Builds`
-- Linux (linux64, GPL, release 8.1) via `BtbN/FFmpeg-Builds`
-- macOS (Apple Silicon, arm64) via trusted pre-built static packages
+- Windows (win64, release 9.0.1) via trusted pre-built static packages (`Tyrrrz/FFmpegBin`)
+- Linux (linux64, release 9.0.1) via trusted pre-built static packages (`Tyrrrz/FFmpegBin`)
+- macOS (Apple Silicon, arm64, release 9.0.1) via trusted pre-built static packages (`Tyrrrz/FFmpegBin`)
 
 **Final artifacts**
 - `ffmpeg-windows.zip` (only `ffmpeg.exe`)

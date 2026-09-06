@@ -7,8 +7,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGETS="${TARGETS:-win64 linux64}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/artifacts}"
 
-WIN64_URL="${WIN64_URL:-https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-gpl-8.1.zip}"
-LINUX64_URL="${LINUX64_URL:-https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-linux64-gpl-8.1.tar.xz}"
+WIN64_URL="${WIN64_URL:-https://github.com/Tyrrrz/FFmpegBin/releases/download/9.0.1/ffmpeg-windows-x64.zip}"
+LINUX64_URL="${LINUX64_URL:-https://github.com/Tyrrrz/FFmpegBin/releases/download/9.0.1/ffmpeg-linux-x64.zip}"
 
 require_cmd() {
     command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }
@@ -23,12 +23,14 @@ mkdir -p "$OUTPUT_DIR"
     for tgt in $TARGETS; do
         case "$tgt" in
             win64)
-                echo "Downloading Windows (win64) FFmpeg 8.1 package..."
-                curl -L -sS -o "$OUTPUT_DIR/ffmpeg-n8.1-latest-win64-gpl-8.1.zip" "$WIN64_URL"
+                echo "Downloading Windows (win64) FFmpeg 9.0.1 package from: $WIN64_URL"
+                filename="$(basename "$WIN64_URL")"
+                curl -L -sS -f -o "$OUTPUT_DIR/$filename" "$WIN64_URL"
                 ;;
             linux64)
-                echo "Downloading Linux (linux64) FFmpeg 8.1 package..."
-                curl -L -sS -o "$OUTPUT_DIR/ffmpeg-n8.1-latest-linux64-gpl-8.1.tar.xz" "$LINUX64_URL"
+                echo "Downloading Linux (linux64) FFmpeg 9.0.1 package from: $LINUX64_URL"
+                filename="$(basename "$LINUX64_URL")"
+                curl -L -sS -f -o "$OUTPUT_DIR/$filename" "$LINUX64_URL"
                 ;;
             *)
                 echo "Unknown target: $tgt" >&2
