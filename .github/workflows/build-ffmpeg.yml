@@ -31,18 +31,20 @@ jobs:
             tar -xf "$archive" -C "$workdir"
           fi
           ffmpeg_path="$(find "$workdir" -type f \( -path '*/bin/ffmpeg.exe' -o -name 'ffmpeg.exe' \) -print -quit)"
-          if [[ -z "$ffmpeg_path" ]]; then
-            echo "ffmpeg.exe not found"
+          ffprobe_path="$(find "$workdir" -type f \( -path '*/bin/ffprobe.exe' -o -name 'ffprobe.exe' \) -print -quit)"
+          if [[ -z "$ffmpeg_path" || -z "$ffprobe_path" ]]; then
+            echo "ffmpeg.exe or ffprobe.exe not found"
             exit 1
           fi
           dist="$PWD/dist-windows"
           rm -rf "$dist"
           mkdir -p "$dist"
           cp "$ffmpeg_path" "$dist/ffmpeg.exe"
+          cp "$ffprobe_path" "$dist/ffprobe.exe"
           (
             cd "$dist"
             rm -f "$PWD/ffmpeg-windows.zip"
-            zip -9 -q "$PWD/ffmpeg-windows.zip" ffmpeg.exe
+            zip -9 -q "$PWD/ffmpeg-windows.zip" ffmpeg.exe ffprobe.exe
           )
 
       - name: Upload artifact
@@ -76,16 +78,18 @@ jobs:
             tar -xf "$archive" -C "$workdir"
           fi
           ffmpeg_path="$(find "$workdir" -type f \( -path '*/bin/ffmpeg' -o -name 'ffmpeg' \) -print -quit)"
-          if [[ -z "$ffmpeg_path" ]]; then
-            echo "ffmpeg not found"
+          ffprobe_path="$(find "$workdir" -type f \( -path '*/bin/ffprobe' -o -name 'ffprobe' \) -print -quit)"
+          if [[ -z "$ffmpeg_path" || -z "$ffprobe_path" ]]; then
+            echo "ffmpeg or ffprobe not found"
             exit 1
           fi
           dist="$PWD/dist-linux"
           rm -rf "$dist"
           mkdir -p "$dist"
           cp "$ffmpeg_path" "$dist/ffmpeg"
-          chmod +x "$dist/ffmpeg"
-          tar -C "$dist" -cJf "$dist/ffmpeg-linux.tar.xz" ffmpeg
+          cp "$ffprobe_path" "$dist/ffprobe"
+          chmod +x "$dist/ffmpeg" "$dist/ffprobe"
+          tar -C "$dist" -cJf "$dist/ffmpeg-linux.tar.xz" ffmpeg ffprobe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -109,16 +113,18 @@ jobs:
         run: |
           set -euo pipefail
           ffmpeg_path="$(find macos/artifacts -type f -name 'ffmpeg' -print -quit)"
-          if [[ -z "$ffmpeg_path" ]]; then
-            echo "ffmpeg not found"
+          ffprobe_path="$(find macos/artifacts -type f -name 'ffprobe' -print -quit)"
+          if [[ -z "$ffmpeg_path" || -z "$ffprobe_path" ]]; then
+            echo "ffmpeg or ffprobe not found"
             exit 1
           fi
           dist="$PWD/dist-macos"
           rm -rf "$dist"
           mkdir -p "$dist"
           cp "$ffmpeg_path" "$dist/ffmpeg"
-          chmod +x "$dist/ffmpeg"
-          tar -C "$dist" -cJf "$dist/ffmpeg-macos.tar.xz" ffmpeg
+          cp "$ffprobe_path" "$dist/ffprobe"
+          chmod +x "$dist/ffmpeg" "$dist/ffprobe"
+          tar -C "$dist" -cJf "$dist/ffmpeg-macos.tar.xz" ffmpeg ffprobe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

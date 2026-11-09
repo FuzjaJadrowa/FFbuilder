@@ -27,14 +27,16 @@ curl -L -sS -f -o "$WORK_DIR/ffmpeg-macos.zip" "$MACOS_URL"
 unzip -q "$WORK_DIR/ffmpeg-macos.zip" -d "$WORK_DIR/extracted"
 
 ffmpeg_bin="$(find "$WORK_DIR/extracted" -type f -name 'ffmpeg' -print -quit)"
+ffprobe_bin="$(find "$WORK_DIR/extracted" -type f -name 'ffprobe' -print -quit)"
 
-if [[ -z "$ffmpeg_bin" ]]; then
-    echo "ffmpeg binary not found in downloaded archive" >&2
+if [[ -z "$ffmpeg_bin" || -z "$ffprobe_bin" ]]; then
+    echo "ffmpeg or ffprobe binary not found in downloaded archive" >&2
     exit 1
 fi
 
 mkdir -p "$OUTPUT_DIR/out/bin"
 cp "$ffmpeg_bin" "$OUTPUT_DIR/out/bin/ffmpeg"
-chmod +x "$OUTPUT_DIR/out/bin/ffmpeg"
+cp "$ffprobe_bin" "$OUTPUT_DIR/out/bin/ffprobe"
+chmod +x "$OUTPUT_DIR/out/bin/ffmpeg" "$OUTPUT_DIR/out/bin/ffprobe"
 
 echo "Artifacts written to: $OUTPUT_DIR"
