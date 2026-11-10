@@ -36,15 +36,28 @@ jobs:
             echo "ffmpeg.exe or ffprobe.exe not found"
             exit 1
           fi
+          deno_asset="deno-x86_64-pc-windows-msvc.zip"
+          deno_url="https://github.com/denoland/deno/releases/download/v2.9.8/$deno_asset"
+          curl -L -sS -f -o "$workdir/$deno_asset" "$deno_url"
+          curl -L -sS -f -o "$workdir/$deno_asset.sha256sum" "$deno_url.sha256sum"
+          (cd "$workdir" && sha256sum -c "$deno_asset.sha256sum")
+          mkdir -p "$workdir/deno"
+          unzip -q "$workdir/$deno_asset" -d "$workdir/deno"
+          deno_path="$(find "$workdir/deno" -type f -name 'deno.exe' -print -quit)"
+          if [[ -z "$deno_path" ]]; then
+            echo "deno.exe not found in the downloaded archive"
+            exit 1
+          fi
           dist="$PWD/dist-windows"
           rm -rf "$dist"
           mkdir -p "$dist"
           cp "$ffmpeg_path" "$dist/ffmpeg.exe"
           cp "$ffprobe_path" "$dist/ffprobe.exe"
+          cp "$deno_path" "$dist/deno.exe"
           (
             cd "$dist"
             rm -f "$PWD/ffmpeg-windows.zip"
-            zip -9 -q "$PWD/ffmpeg-windows.zip" ffmpeg.exe ffprobe.exe
+            zip -9 -q "$PWD/ffmpeg-windows.zip" ffmpeg.exe ffprobe.exe deno.exe
           )
 
       - name: Upload artifact
@@ -83,13 +96,26 @@ jobs:
             echo "ffmpeg or ffprobe not found"
             exit 1
           fi
+          deno_asset="deno-x86_64-unknown-linux-gnu.zip"
+          deno_url="https://github.com/denoland/deno/releases/download/v2.9.8/$deno_asset"
+          curl -L -sS -f -o "$workdir/$deno_asset" "$deno_url"
+          curl -L -sS -f -o "$workdir/$deno_asset.sha256sum" "$deno_url.sha256sum"
+          (cd "$workdir" && sha256sum -c "$deno_asset.sha256sum")
+          mkdir -p "$workdir/deno"
+          unzip -q "$workdir/$deno_asset" -d "$workdir/deno"
+          deno_path="$(find "$workdir/deno" -type f -name 'deno' -print -quit)"
+          if [[ -z "$deno_path" ]]; then
+            echo "deno not found in the downloaded archive"
+            exit 1
+          fi
           dist="$PWD/dist-linux"
           rm -rf "$dist"
           mkdir -p "$dist"
           cp "$ffmpeg_path" "$dist/ffmpeg"
           cp "$ffprobe_path" "$dist/ffprobe"
-          chmod +x "$dist/ffmpeg" "$dist/ffprobe"
-          tar -C "$dist" -cJf "$dist/ffmpeg-linux.tar.xz" ffmpeg ffprobe
+          cp "$deno_path" "$dist/deno"
+          chmod +x "$dist/ffmpeg" "$dist/ffprobe" "$dist/deno"
+          tar -C "$dist" -cJf "$dist/ffmpeg-linux.tar.xz" ffmpeg ffprobe deno
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -118,13 +144,26 @@ jobs:
             echo "ffmpeg or ffprobe not found"
             exit 1
           fi
+          deno_asset="deno-aarch64-apple-darwin.zip"
+          deno_url="https://github.com/denoland/deno/releases/download/v2.9.8/$deno_asset"
+          curl -L -sS -f -o "$workdir/$deno_asset" "$deno_url"
+          curl -L -sS -f -o "$workdir/$deno_asset.sha256sum" "$deno_url.sha256sum"
+          (cd "$workdir" && shasum -a 256 -c "$deno_asset.sha256sum")
+          mkdir -p "$workdir/deno"
+          unzip -q "$workdir/$deno_asset" -d "$workdir/deno"
+          deno_path="$(find "$workdir/deno" -type f -name 'deno' -print -quit)"
+          if [[ -z "$deno_path" ]]; then
+            echo "deno not found in the downloaded archive"
+            exit 1
+          fi
           dist="$PWD/dist-macos"
           rm -rf "$dist"
           mkdir -p "$dist"
           cp "$ffmpeg_path" "$dist/ffmpeg"
           cp "$ffprobe_path" "$dist/ffprobe"
-          chmod +x "$dist/ffmpeg" "$dist/ffprobe"
-          tar -C "$dist" -cJf "$dist/ffmpeg-macos.tar.xz" ffmpeg ffprobe
+          cp "$deno_path" "$dist/deno"
+          chmod +x "$dist/ffmpeg" "$dist/ffprobe" "$dist/deno"
+          tar -C "$dist" -cJf "$dist/ffmpeg-macos.tar.xz" ffmpeg ffprobe deno
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
