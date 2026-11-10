@@ -148,6 +148,7 @@ jobs:
       - name: Prepare macOS archive
         run: |
           set -euo pipefail
+          workdir="$(mktemp -d)"
           ffmpeg_path="$(find macos/artifacts -type f -name 'ffmpeg' -print -quit)"
           ffprobe_path="$(find macos/artifacts -type f -name 'ffprobe' -print -quit)"
           if [[ -z "$ffmpeg_path" || -z "$ffprobe_path" ]]; then
