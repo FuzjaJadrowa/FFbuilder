@@ -40,7 +40,12 @@ jobs:
           deno_url="https://github.com/denoland/deno/releases/download/v2.9.8/$deno_asset"
           curl -L -sS -f -o "$workdir/$deno_asset" "$deno_url"
           curl -L -sS -f -o "$workdir/$deno_asset.sha256sum" "$deno_url.sha256sum"
-          (cd "$workdir" && sha256sum -c "$deno_asset.sha256sum")
+          expected_checksum="$(awk -F ':' '/^Hash[[:space:]]*:/ { gsub(/[[:space:]]/, "", $2); print tolower($2); exit }' "$workdir/$deno_asset.sha256sum")"
+          actual_checksum="$(sha256sum "$workdir/$deno_asset" | awk '{print $1}')"
+          if [[ ! "$expected_checksum" =~ ^[0-9a-f]{64}$ || "$actual_checksum" != "$expected_checksum" ]]; then
+            echo "Deno SHA-256 checksum mismatch"
+            exit 1
+          fi
           mkdir -p "$workdir/deno"
           unzip -q "$workdir/$deno_asset" -d "$workdir/deno"
           deno_path="$(find "$workdir/deno" -type f -name 'deno.exe' -print -quit)"
@@ -100,7 +105,12 @@ jobs:
           deno_url="https://github.com/denoland/deno/releases/download/v2.9.8/$deno_asset"
           curl -L -sS -f -o "$workdir/$deno_asset" "$deno_url"
           curl -L -sS -f -o "$workdir/$deno_asset.sha256sum" "$deno_url.sha256sum"
-          (cd "$workdir" && sha256sum -c "$deno_asset.sha256sum")
+          expected_checksum="$(awk 'NF >= 2 && $1 ~ /^[[:xdigit:]]+$/ { print tolower($1); exit }' "$workdir/$deno_asset.sha256sum")"
+          actual_checksum="$(sha256sum "$workdir/$deno_asset" | awk '{print $1}')"
+          if [[ ! "$expected_checksum" =~ ^[0-9a-f]{64}$ || "$actual_checksum" != "$expected_checksum" ]]; then
+            echo "Deno SHA-256 checksum mismatch"
+            exit 1
+          fi
           mkdir -p "$workdir/deno"
           unzip -q "$workdir/$deno_asset" -d "$workdir/deno"
           deno_path="$(find "$workdir/deno" -type f -name 'deno' -print -quit)"
@@ -148,7 +158,12 @@ jobs:
           deno_url="https://github.com/denoland/deno/releases/download/v2.9.8/$deno_asset"
           curl -L -sS -f -o "$workdir/$deno_asset" "$deno_url"
           curl -L -sS -f -o "$workdir/$deno_asset.sha256sum" "$deno_url.sha256sum"
-          (cd "$workdir" && shasum -a 256 -c "$deno_asset.sha256sum")
+          expected_checksum="$(awk 'NF >= 2 && $1 ~ /^[[:xdigit:]]+$/ { print tolower($1); exit }' "$workdir/$deno_asset.sha256sum")"
+          actual_checksum="$(shasum -a 256 "$workdir/$deno_asset" | awk '{print $1}')"
+          if [[ ! "$expected_checksum" =~ ^[0-9a-f]{64}$ || "$actual_checksum" != "$expected_checksum" ]]; then
+            echo "Deno SHA-256 checksum mismatch"
+            exit 1
+          fi
           mkdir -p "$workdir/deno"
           unzip -q "$workdir/$deno_asset" -d "$workdir/deno"
           deno_path="$(find "$workdir/deno" -type f -name 'deno' -print -quit)"
