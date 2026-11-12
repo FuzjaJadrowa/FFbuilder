@@ -12,8 +12,8 @@ FFbuilder is a repository for automated FFmpeg package distribution for Windows,
 
 **What it packages**
 - Windows, Linux, and macOS archives also include Deno 2.9.8 for yt-dlp JavaScript support
-- Windows (win64, release 9.0.1) via trusted pre-built static packages (`Tyrrrz/FFmpegBin`)
-- Linux (linux64, release 9.0.1) via trusted pre-built static packages (`Tyrrrz/FFmpegBin`)
+- Windows (win64) via BtbN GPL builds.
+- Linux (linux64) via BtbN GPL builds.
 - macOS (Apple Silicon, arm64, release 9.0.1) via trusted pre-built static packages (`Tyrrrz/FFmpegBin`)
 
 **Final artifacts**
